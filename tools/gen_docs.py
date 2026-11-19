@@ -91,11 +91,11 @@ def main() -> None:
     args = parser.parse_args()
     text = render()
     if args.check:
-        if not OUT.is_file() or OUT.read_text() != text:
+        if not OUT.is_file() or OUT.read_text(encoding="utf-8") != text:
             print("docs/modules.md is out of date; run python tools/gen_docs.py", file=sys.stderr)
             sys.exit(1)
         return
-    OUT.write_text(text)
+    OUT.write_text(text, encoding="utf-8")
     print(f"Wrote {OUT}")
 
 

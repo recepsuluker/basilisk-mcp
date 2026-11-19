@@ -87,7 +87,7 @@ def main() -> None:
     }
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(json.dumps(out))
+    args.out.write_text(json.dumps(out), encoding="utf-8")
     print(f"Wrote {args.out} (Basilisk {BSK_VERSION})")
 
 

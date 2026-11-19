@@ -266,7 +266,7 @@ def create_server(settings: Settings, manager: Manager | None = None) -> MCPServ
         session = manager.get(session_id)
         source = manager.script(session, duration_s, vizard=vizard)
         path = manager.session_dir(session) / f"scenario_v{session.version}.py"
-        path.write_text(source)
+        path.write_text(source, encoding="utf-8")
         return {"session_id": session.id, "version": session.version, "path": str(path),
                 "lines": source.count("\n") + 1, "script": source}
 

@@ -117,7 +117,7 @@ def cmd_doctor(args) -> int:
 
         _private_dir(settings.data_dir)
         probe_file = settings.data_dir / ".write-test"
-        probe_file.write_text("ok")
+        probe_file.write_text("ok", encoding="utf-8")
         probe_file.unlink()
         mode = oct(settings.data_dir.stat().st_mode & 0o777)
         report("data directory", True, f"{settings.data_dir} (mode {mode})")
@@ -137,7 +137,7 @@ def cmd_doctor(args) -> int:
         print(f"[{'ok' if exe else 'info'}] vizard: {exe or 'not found (optional, 3-D view). Download: ' + download_url()}")
         with tempfile.TemporaryDirectory() as tmp:
             run_dir = Path(tmp)
-            (run_dir / "scenario.py").write_text(source)
+            (run_dir / "scenario.py").write_text(source, encoding="utf-8")
             outcome = asyncio.run(run_script(run_dir / "scenario.py", run_dir, settings))
             report("smoke simulation", outcome.ok,
                    f"basic_orbit for 600 s in {outcome.wall_time_s:.2f} s" if outcome.ok
@@ -174,7 +174,7 @@ def cmd_init_config(args) -> int:
     if path.exists() and not args.force:
         print(f"{path} exists; use --force to overwrite.", file=sys.stderr)
         return 1
-    path.write_text(EXAMPLE_CONFIG)
+    path.write_text(EXAMPLE_CONFIG, encoding="utf-8")
     print(f"Wrote {path}")
     return 0
 

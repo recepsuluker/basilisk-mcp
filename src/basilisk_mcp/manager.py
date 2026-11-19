@@ -37,7 +37,7 @@ def _now() -> str:
 
 def _write_json(path: Path, data: Any) -> None:
     tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(data, indent=2))
+    tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
     os.replace(tmp, path)
 
 
@@ -112,7 +112,7 @@ class Manager:
     def _load(self) -> None:
         for path in sorted(self.sessions_dir.glob("s*/session.json")):
             try:
-                raw = json.loads(path.read_text())
+                raw = json.loads(path.read_text(encoding="utf-8"))
                 if not SESSION_ID_RE.match(raw.get("id", "")) or raw["id"] != path.parent.name:
                     raise ValidationError("bad session id")
                 session = Session(
@@ -231,7 +231,7 @@ class Manager:
             while run_id in session.runs:  # pragma: no cover
                 run_id = f"r{int(run_id[1:]) + 1:03d}"
             run_dir = _private_dir(self.session_dir(session) / "runs" / run_id)
-            (run_dir / "scenario.py").write_text(source)
+            (run_dir / "scenario.py").write_text(source, encoding="utf-8")
             _write_json(run_dir / "spec.json", spec_snapshot)
             record = {"run_id": run_id, "label": (label or "").strip()[:80], "status": "running",
                       "duration_s": duration_s, "spec_version": version, "created": _now()}
@@ -251,7 +251,7 @@ class Manager:
                 "Shorten duration_s, increase dt_s, or check the parameters; the stderr tail is attached.",
                 run_id=run_id, stderr_tail=outcome.stderr_tail[-4000:], stdout_tail=outcome.stdout_tail[-1000:],
             )
-        summary = json.loads((run_dir / "summary.json").read_text())
+        summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
         record["status"] = "completed"
         record["basilisk_version"] = summary.get("basilisk_version")
         record["simulation_wall_time_s"] = round(float(summary.get("wall_time_s", 0.0)), 3)
@@ -295,7 +295,7 @@ class Manager:
 
     def run_spec(self, session: Session, run_id: str) -> dict[str, Any]:
         path = self.run_dir(session, run_id) / "spec.json"
-        return json.loads(path.read_text()) if path.is_file() else session.spec
+        return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else session.spec
 
     def vizard_file(self, session_id: str, run_id: str | None = None) -> Path:
         """The vizard.bin of a run (default: the latest run of the session that has one)."""

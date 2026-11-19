@@ -27,7 +27,7 @@ class RunData:
 
     def __init__(self, run_dir: Path):
         self.run_dir = run_dir
-        self.summary = json.loads((run_dir / "summary.json").read_text())
+        self.summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
         with np.load(run_dir / "results.npz", allow_pickle=False) as data:
             self.arrays = {k: np.array(data[k]) for k in data.files}
 
@@ -419,7 +419,7 @@ def export_csv(data: RunData, recorder: str, path: Path) -> dict[str, Any]:
         columns.append(data.arrays[f"{recorder}__{v}"])
         header += [v] if width == 1 else [f"{v}[{i}]" for i in range(width)]
     table = np.hstack(columns)
-    with path.open("w", newline="") as handle:
+    with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
         writer.writerow(header)
         writer.writerows(table.tolist())

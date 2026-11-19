@@ -181,7 +181,7 @@ async def main() -> None:
         await orbit_study(client, report)
         await attitude_study(client, report)
         await nadir_study(client, report)
-    (ROOT / "examples" / "RESULTS.md").write_text("\n".join(report))
+    (ROOT / "examples" / "RESULTS.md").write_text("\n".join(report), encoding="utf-8")
     print(json.dumps({"results": "examples/RESULTS.md", "images": sorted(p.name for p in IMAGES.glob("*.png"))}))
 
 

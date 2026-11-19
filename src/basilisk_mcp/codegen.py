@@ -454,7 +454,7 @@ def generate_script(spec: dict[str, Any], duration_s: float, *, session_id: str 
         w('        "vizard_file": vizard_file.name if vizard_file is not None else None,')
     w('        "recorders": recorders,')
     w("    }")
-    w('    (output_dir / "summary.json").write_text(json.dumps(summary, indent=2))')
+    w('    (output_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")')
     w("    return summary")
     w("")
     w("")
