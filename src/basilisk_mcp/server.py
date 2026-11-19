@@ -23,6 +23,8 @@ from .manager import Manager
 from .registry import MODULE_TYPES, catalog, get_module_type
 from .runner import probe_basilisk
 from .templates import list_templates as template_catalog
+from .vizard import find_vizard
+from .vizard import launch as launch_vizard
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +38,7 @@ Typical workflow:
 4. validate_session, then run_simulation(duration_s).
 5. analyze_run ('orbit', 'attitude', 'actuators'), query_results, plot_results, compare_runs.
 6. export_script returns the exact standalone Basilisk Python script that was run.
+7. For a 3-D view, run_simulation(..., vizard=true) and then open_in_vizard to launch Basilisk's Vizard app.
 
 Conventions: SI units with the unit in every parameter name (mass_kg, inclination_deg, torque_B_Nm);
 attitudes are MRPs; frames: _B body, _N inertial. Errors include a hint describing a valid call.
@@ -110,6 +113,7 @@ def create_server(settings: Settings, manager: Manager | None = None) -> MCPServ
             "open_sessions": len(manager.sessions),
             "limits": {k: v for k, v in settings.public().items() if k.startswith("max_") or k.endswith("_s")},
             "data_dir": str(settings.data_dir),
+            "vizard": str(find_vizard(settings) or "not found"),
         }
         if check_basilisk:
             if "result" not in probe_cache:
@@ -254,10 +258,13 @@ def create_server(settings: Settings, manager: Manager | None = None) -> MCPServ
         return {"session_id": session.id, "version": session.version, "valid": not problems, "problems": problems}
 
     @tool(READ_ONLY)
-    def export_script(session_id: str, duration_s: float) -> dict[str, Any]:
-        """Return the standalone Basilisk Python script for this session (exactly what run_simulation executes)."""
+    def export_script(session_id: str, duration_s: float, vizard: bool = False) -> dict[str, Any]:
+        """Return the standalone Basilisk Python script for this session (exactly what run_simulation executes).
+
+        vizard=true includes the lines that write a Vizard 3-D visualization file.
+        """
         session = manager.get(session_id)
-        source = manager.script(session, duration_s)
+        source = manager.script(session, duration_s, vizard=vizard)
         path = manager.session_dir(session) / f"scenario_v{session.version}.py"
         path.write_text(source)
         return {"session_id": session.id, "version": session.version, "path": str(path),
@@ -266,14 +273,30 @@ def create_server(settings: Settings, manager: Manager | None = None) -> MCPServ
     # ---------------------------------------------------------------- running
 
     @tool(RUN)
-    async def run_simulation(session_id: str, duration_s: float, label: str | None = None) -> dict[str, Any]:
+    async def run_simulation(session_id: str, duration_s: float, label: str | None = None,
+                             vizard: bool = False) -> dict[str, Any]:
         """Validate, generate and run the simulation for duration_s simulated seconds in an isolated worker.
 
+        vizard=true also records a Vizard 3-D visualization file (vizard.bin); open it with open_in_vizard.
         Returns the run record and a compact overview (initial/final/min/max) of every recorded variable.
         """
-        record = await manager.run(session_id, duration_s, label)
+        record = await manager.run(session_id, duration_s, label, vizard=vizard)
         _, _, data = manager.run_data(session_id, record["run_id"])
-        return {"session_id": session_id, "run": record, "overview": R.run_overview(data)}
+        out = {"session_id": session_id, "run": record, "overview": R.run_overview(data)}
+        if vizard and record.get("vizard_file") and settings.vizard_auto_open:
+            try:
+                out["vizard"] = launch_vizard(settings, manager.vizard_file(session_id, record["run_id"]))
+            except BskMcpError as exc:
+                out["vizard"] = exc.as_dict()
+        return out
+
+    @tool(RUN)
+    def open_in_vizard(session_id: str, run_id: str | None = None) -> dict[str, Any]:
+        """Open a run's 3-D visualization in Basilisk's Vizard app on this computer (default: latest Vizard run).
+
+        The run must have been made with run_simulation(..., vizard=true).
+        """
+        return launch_vizard(settings, manager.vizard_file(session_id, run_id))
 
     @tool(READ_ONLY)
     def list_runs(session_id: str) -> list[dict[str, Any]]:

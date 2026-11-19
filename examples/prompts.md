@@ -38,6 +38,12 @@ chooses the tools; you can ask it to show the tool calls or the generated script
 * "Use four reaction wheels in a pyramid configuration (axes at 54.74 deg from +z) and
   check that the controller still converges."
 
+## 3-D visualization (Vizard)
+
+* "Run the reaction-wheel attitude example with Vizard and open it."
+* "Show the nadir-pointing scenario in Vizard."
+* "Open run r002 in Vizard."
+
 ## Reproducibility
 
 * "Export the script for the last run." Then run it yourself:

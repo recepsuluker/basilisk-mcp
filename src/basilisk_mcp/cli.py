@@ -131,6 +131,10 @@ def cmd_doctor(args) -> int:
 
         spec = replay(template_spec("basic_orbit"), settings)
         source = generate_script(spec, 600.0)
+        from .vizard import download_url, find_vizard
+
+        exe = find_vizard(settings)
+        print(f"[{'ok' if exe else 'info'}] vizard: {exe or 'not found (optional, 3-D view). Download: ' + download_url()}")
         with tempfile.TemporaryDirectory() as tmp:
             run_dir = Path(tmp)
             (run_dir / "scenario.py").write_text(source)
@@ -140,6 +144,29 @@ def cmd_doctor(args) -> int:
                    else outcome.stderr_tail[-500:])
     print("All checks passed." if ok else "Some checks failed.")
     return 0 if ok else 1
+
+
+def cmd_vizard(args) -> int:
+    """Open the latest (or a chosen) run in Vizard: suitable for a desktop shortcut."""
+    settings = load_settings(args.config, data_dir=args.data_dir, python=args.python)
+    from .manager import Manager
+    from .vizard import download_url, find_vizard, launch
+
+    if args.find:
+        exe = find_vizard(settings)
+        print(exe if exe else f"Vizard not found. Download: {download_url()}")
+        return 0 if exe else 1
+    manager = Manager(settings)
+    if args.session:
+        path = manager.vizard_file(args.session, args.run)
+    else:
+        path = manager.latest_vizard_file()
+        if path is None:
+            print("No run with a Vizard file yet. Ask Claude to run a simulation with vizard=true.", file=sys.stderr)
+            return 1
+    result = launch(settings, path)
+    print(f"Opened {result['file']} in {result['vizard']}")
+    return 0
 
 
 def cmd_init_config(args) -> int:
@@ -191,6 +218,12 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("path", nargs="?", default="basilisk-mcp.toml")
     init.add_argument("--force", action="store_true")
     init.set_defaults(func=cmd_init_config)
+
+    viz = sub.add_parser("vizard", help="open the latest run (or --session/--run) in Vizard")
+    viz.add_argument("--session", help="session id (default: newest Vizard file of any session)")
+    viz.add_argument("--run", help="run id within --session (default: its latest Vizard run)")
+    viz.add_argument("--find", action="store_true", help="only print where Vizard was found")
+    viz.set_defaults(func=cmd_vizard)
 
     token = sub.add_parser("token", help="print a random bearer token for the HTTP transport")
     token.set_defaults(func=cmd_token)

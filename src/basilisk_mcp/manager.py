@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from . import spec as S
-from .codegen import generate_script
+from .codegen import generate_script, vizard_period
 from .config import Settings
 from .errors import BskMcpError, Conflict, LimitExceeded, NotFound, RunFailed, SpecInvalid, ValidationError
 from .results import RunData
@@ -206,23 +206,26 @@ class Manager:
     def validate(self, session: Session, duration_s: float | None = None) -> list[str]:
         return S.validate_spec(session.spec, self.settings, duration_s)
 
-    def script(self, session: Session, duration_s: float) -> str:
+    def script(self, session: Session, duration_s: float, vizard: bool = False) -> str:
         problems = self.validate(session, duration_s)
         if problems:
             raise SpecInvalid(problems)
-        return generate_script(session.spec, duration_s, session_id=session.id, spec_version=session.version)
+        vizard_dt = vizard_period(session.spec, duration_s, self.settings.max_vizard_frames) if vizard else None
+        return generate_script(session.spec, duration_s, session_id=session.id, spec_version=session.version,
+                               vizard=vizard, vizard_dt_s=vizard_dt)
 
     def _lock(self, session_id: str) -> asyncio.Lock:
         return self._locks.setdefault(session_id, asyncio.Lock())
 
-    async def run(self, session_id: str, duration_s: float, label: str | None = None) -> dict[str, Any]:
+    async def run(self, session_id: str, duration_s: float, label: str | None = None,
+                  vizard: bool = False) -> dict[str, Any]:
         session = self.get(session_id)
         if len(session.runs) >= self.settings.max_runs_per_session:
             raise LimitExceeded(f"A session may hold {self.settings.max_runs_per_session} runs.",
                                 "Create a new session (templates make this quick).")
         spec_snapshot = copy.deepcopy(session.spec)
         version = session.version
-        source = self.script(session, duration_s)
+        source = self.script(session, duration_s, vizard=vizard)
         async with self._lock(session_id):
             run_id = f"r{len(session.runs) + 1:03d}"
             while run_id in session.runs:  # pragma: no cover
@@ -253,6 +256,9 @@ class Manager:
         record["basilisk_version"] = summary.get("basilisk_version")
         record["simulation_wall_time_s"] = round(float(summary.get("wall_time_s", 0.0)), 3)
         record["recorders"] = {k: v["samples"] for k, v in summary["recorders"].items()}
+        if vizard:
+            vizard_file = run_dir / "vizard.bin"
+            record["vizard_file"] = str(vizard_file) if vizard_file.is_file() else None
         self._save(session)
         return record
 
@@ -290,6 +296,24 @@ class Manager:
     def run_spec(self, session: Session, run_id: str) -> dict[str, Any]:
         path = self.run_dir(session, run_id) / "spec.json"
         return json.loads(path.read_text()) if path.is_file() else session.spec
+
+    def vizard_file(self, session_id: str, run_id: str | None = None) -> Path:
+        """The vizard.bin of a run (default: the latest run of the session that has one)."""
+        session = self.get(session_id)
+        if run_id is None:
+            with_file = [r for r, rec in session.runs.items() if rec.get("vizard_file")]
+            if not with_file:
+                raise NotFound("Run with a Vizard file in session", session_id)
+            run_id = with_file[-1]
+        path = self.run_dir(session, run_id) / "vizard.bin"
+        if not path.is_file():
+            raise ValidationError(f"Run {run_id} has no Vizard file.",
+                                  "Run the simulation again with run_simulation(..., vizard=true).")
+        return path
+
+    def latest_vizard_file(self) -> Path | None:
+        files = sorted(self.sessions_dir.glob("s*/runs/r*/vizard.bin"), key=lambda p: p.stat().st_mtime)
+        return files[-1] if files else None
 
     @staticmethod
     def templates() -> dict[str, Any]:

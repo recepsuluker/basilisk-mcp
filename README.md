@@ -43,6 +43,9 @@ standalone Basilisk script that produced them.
 * **Context-friendly results.** Physics analyses (orbit elements and J2 secular
   rates, settling time, actuator usage), down-sampled queries, run comparisons, PNG
   plots and CSV export, instead of megabytes of raw data.
+* **3-D visualization in one click.** Any run can also record a
+  [Vizard](https://avslab.github.io/basilisk/Vizard/Vizard.html) file; `open_in_vizard`,
+  `basilisk-mcp vizard` or a desktop shortcut opens it. See [docs/vizard.md](docs/vizard.md).
 * **Self-correcting errors.** Every error says what was wrong and what a valid call
   looks like, so Claude can fix its own mistakes.
 
@@ -113,6 +116,7 @@ transport with bearer tokens, and troubleshooting are covered in
 * *"Compare a 700 km sun-synchronous orbit with and without J2 over three days."*
 * *"Build a nadir-pointing 300 kg spacecraft with three HR12 wheels from scratch and
   tell me how long it takes to settle."*
+* *"Run the reaction-wheel example with Vizard and open it in 3-D."*
 
 More in [examples/prompts.md](examples/prompts.md).
 
@@ -150,7 +154,7 @@ then two retuned controllers:
 | Sessions | `create_session`, `list_sessions`, `get_session`, `close_session` |
 | Editing | `add_module`, `set_params`, `remove_module`, `connect`, `disconnect`, `add_recorder`, `remove_recorder`, `set_simulation` |
 | Checking | `validate_session`, `export_script` |
-| Running | `run_simulation`, `list_runs`, `get_run` |
+| Running | `run_simulation` (optionally with `vizard=true`), `list_runs`, `get_run`, `open_in_vizard` |
 | Results | `query_results`, `analyze_run`, `plot_results`, `compare_runs`, `export_results` |
 
 Prompts: `orbit_study`, `attitude_control_study`. Resources: `basilisk://modules`,
@@ -182,7 +186,7 @@ pip install -e ".[dev]"
 pytest
 ```
 
-The suite (84 tests) covers:
+The suite (92 tests) covers:
 
 * **Physics.** Reproduction of the official `scenarioAttitudeFeedbackRW.py` (attitude
   error, wheel speeds, motor torques) and `scenarioBasicOrbit.py` (position and
@@ -201,12 +205,13 @@ The suite (84 tests) covers:
 Optional TOML file (`basilisk-mcp init-config`), `BASILISK_MCP_*` environment
 variables, or CLI flags. Key settings: `data_dir`, `python` (a separate interpreter
 with Basilisk), `run_timeout_s`, `max_concurrent_runs`, `max_steps`,
-`memory_limit_mb`. See [docs/configuration.md](docs/configuration.md).
+`memory_limit_mb`, `vizard_path`, `vizard_auto_open`. See
+[docs/configuration.md](docs/configuration.md).
 
 ## Roadmap
 
 Atmospheric drag, SPICE ephemerides and third-body gravity, thrusters and maneuvers,
-sensor noise models, Monte Carlo studies, Vizard output, formation flying. See
+sensor noise models, Monte Carlo studies, live Vizard streaming, formation flying. See
 [PLAN.md §10](PLAN.md#10-roadmap-after-v01). Contributions are welcome: see
 [CONTRIBUTING.md](CONTRIBUTING.md).
 

@@ -53,12 +53,18 @@ class Settings:
     max_log_bytes: int = 16_384
     #: Log level for the server's own stderr logging.
     log_level: str = "INFO"
+    #: Path to the Vizard executable (Vizard.exe, Vizard.app or Vizard.x86_64). Empty: auto-detect.
+    vizard_path: str = ""
+    #: Open Vizard automatically after a run that saved a Vizard file.
+    vizard_auto_open: bool = False
+    #: Maximum frames written to a Vizard file; the Vizard task period is stretched to stay below it.
+    max_vizard_frames: int = 20_000
 
     def validate(self) -> Settings:
         positive_ints = (
             "max_sessions", "max_modules", "max_recorders", "max_runs_per_session",
             "max_concurrent_runs", "max_steps", "max_recorded_samples", "max_query_points",
-            "max_log_bytes",
+            "max_log_bytes", "max_vizard_frames",
         )
         for name in positive_ints:
             if int(getattr(self, name)) < 1:
@@ -150,4 +156,10 @@ memory_limit_mb = 4096           # worker address-space limit (POSIX), 0 disable
 max_file_size_mb = 512           # largest file a worker may write (POSIX), 0 disables
 max_log_bytes = 16384
 log_level = "INFO"
+
+# Vizard 3-D visualization (https://avslab.github.io/basilisk/Vizard/Vizard.html)
+# Path to Vizard.exe (Windows), Vizard.app (macOS) or the Linux binary. Empty: auto-detect common locations.
+# vizard_path = "C:/Users/you/Vizard/Vizard.exe"
+vizard_auto_open = false         # open Vizard automatically after run_simulation(vizard=true)
+max_vizard_frames = 20000        # frames per Vizard file; the Vizard task period is stretched to stay below
 """

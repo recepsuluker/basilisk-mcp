@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 — 2026-11-19
+
+* Vizard 3-D visualization: `run_simulation(..., vizard=true)` records `vizard.bin` (spacecraft, planet,
+  body axes, reaction wheels); `open_in_vizard` tool, `basilisk-mcp vizard` command for a one-click desktop
+  shortcut, Vizard auto-detection, optional `vizard_auto_open`, `max_vizard_frames`.
+* `export_script(..., vizard=true)`.
+* `doctor` reports whether Vizard was found.
+
 ## 0.1.0 — 2026-11-19
 
 First public release.

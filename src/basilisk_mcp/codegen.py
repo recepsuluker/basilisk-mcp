@@ -17,6 +17,7 @@ numerically identical and the exported script is familiar to Basilisk users.
 from __future__ import annotations
 
 import ast
+import math
 from typing import Any
 
 from . import __version__
@@ -137,9 +138,18 @@ def output_expr(spec, endpoint: str) -> str:
     return f"{var(module)}_config_msg" if attr is None else f"{var(module)}.{attr}"
 
 
+def vizard_period(spec: dict[str, Any], duration_s: float, max_frames: int) -> float:
+    """Vizard task period: the dynamics step, stretched (integer multiple) to stay below ``max_frames``."""
+    dt = float(spec["simulation"]["dt_s"])
+    return dt * max(1, math.ceil(duration_s / dt / max_frames))
+
+
 def generate_script(spec: dict[str, Any], duration_s: float, *, session_id: str = "standalone",
-                    spec_version: int = 0) -> str:
-    """Return the scenario source for ``spec`` running for ``duration_s`` seconds."""
+                    spec_version: int = 0, vizard: bool = False, vizard_dt_s: float | None = None) -> str:
+    """Return the scenario source for ``spec`` running for ``duration_s`` seconds.
+
+    With ``vizard=True`` the script also writes ``vizard.bin`` for Basilisk's Vizard 3-D visualizer.
+    """
     for name in list(spec["modules"]) + list(spec["recorders"]):
         if not NAME_RE.match(name):  # defense in depth; names were validated on input
             raise ValidationError(f"invalid name {name!r}")
@@ -177,6 +187,8 @@ def generate_script(spec: dict[str, Any], duration_s: float, *, session_id: str 
         utilities.append("simIncludeGravBody")
     if "reaction_wheels" in types_used:
         utilities.append("simIncludeRW")
+    if vizard:
+        utilities.append("vizSupport")
     w(f"from Basilisk.utilities import {', '.join(utilities)}")
     sim_mods = sorted({SIM_IMPORTS[t] for t in types_used if t in SIM_IMPORTS})
     if integrator != "rk4" and "spacecraft" in types_used:
@@ -195,6 +207,8 @@ def generate_script(spec: dict[str, Any], duration_s: float, *, session_id: str 
     w(f"DYNAMICS_DT_S = {num(sim['dt_s'])}  # [s]")
     if has_fsw:
         w(f"FSW_DT_S = {num(task_dt(spec, 'fsw'))}  # [s]")
+    if vizard:
+        w(f"VIZARD_DT_S = {num(vizard_dt_s or sim['dt_s'])}  # [s] Vizard frame period")
     w("")
     w("")
     w("def run(output_dir: pathlib.Path) -> dict:")
@@ -204,6 +218,8 @@ def generate_script(spec: dict[str, Any], duration_s: float, *, session_id: str 
     w('    process.addTask(sim.CreateNewTask("dynamicsTask", macros.sec2nano(DYNAMICS_DT_S)))')
     if has_fsw:
         w('    process.addTask(sim.CreateNewTask("fswTask", macros.sec2nano(FSW_DT_S)))')
+    if vizard:
+        w('    process.addTask(sim.CreateNewTask("vizardTask", macros.sec2nano(VIZARD_DT_S)))')
     w("    gravity_info = {}")
 
     body: list[str] = []
@@ -380,6 +396,29 @@ def generate_script(spec: dict[str, Any], duration_s: float, *, session_id: str 
             widths[vname] = vdef.width or wheel_count(spec, rec["source"]) or 36
         rec_meta[rname] = {"source": rec["source"], "msg_type": msg_type, "variables": widths}
 
+    # ---- phase 6: Vizard 3-D visualization file
+    if vizard:
+        spacecraft_names = [n for n, m in modules.items() if m["type"] == "spacecraft"]
+        wheels = {m["params"]["attach_to"]: n for n, m in modules.items() if m["type"] == "reaction_wheels"}
+        b("")
+        b("# --- Vizard 3-D visualization file (open with: Vizard -loadFile vizard.bin)")
+        b("vizard_file = None")
+        b("if vizSupport.vizFound:")
+        b('    vizard_file = output_dir / "vizard.bin"')
+        b("    viz = vizSupport.enableUnityVisualization(")
+        b(f'        sim, "vizardTask", [{", ".join(var(n) for n in spacecraft_names)}],')
+        b("        saveFile=str(vizard_file),")
+        if wheels:
+            rw_list = ", ".join(var(wheels[n]) if n in wheels else "None" for n in spacecraft_names)
+            b(f"        rwEffectorList=[{rw_list}],")
+        b("    )")
+        b("    viz.settings.spacecraftCSon = 1  # show body axes")
+        b("    viz.settings.showSpacecraftLabels = 1")
+        for n in spacecraft_names:
+            if n in wheels:
+                b(f"    vizSupport.setActuatorGuiSetting(viz, spacecraftName={var(n)}.ModelTag, "
+                  "viewRWPanel=True, viewRWHUD=True)")
+
     for line in body:
         lines.append(("    " + line) if line else "")
 
@@ -411,6 +450,8 @@ def generate_script(spec: dict[str, Any], duration_s: float, *, session_id: str 
     w('        "gravity": gravity_info,')
     sc_grav = {n: gravity_of(spec, n) for n, m in modules.items() if m["type"] == "spacecraft"}
     w(f'        "spacecraft_gravity": {sc_grav!r},')
+    if vizard:
+        w('        "vizard_file": vizard_file.name if vizard_file is not None else None,')
     w('        "recorders": recorders,')
     w("    }")
     w('    (output_dir / "summary.json").write_text(json.dumps(summary, indent=2))')

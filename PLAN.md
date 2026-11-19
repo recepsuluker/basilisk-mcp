@@ -278,5 +278,5 @@ installed. CI runs on Linux and macOS for Python 3.11–3.13.
 * Thrusters and orbit maneuvers (impulsive Δv, Hohmann template).
 * Sensor noise models (`simpleNav` noise, coarse sun sensors, star tracker).
 * Monte Carlo / parameter sweeps as background studies.
-* Vizard binary output for 3-D playback.
+* Live Vizard streaming (`liveStream`); recorded Vizard files are available since v0.2.
 * Formation flying (multiple spacecraft templates).

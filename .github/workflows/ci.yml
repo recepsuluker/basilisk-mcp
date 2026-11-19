@@ -16,6 +16,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
         python: ["3.11", "3.12", "3.13"]
+        include:
+          - os: windows-latest
+            python: "3.12"
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -28,6 +31,7 @@ jobs:
       - name: Docs up to date
         run: python tools/gen_docs.py --check
       - name: Doctor
+        shell: bash
         run: basilisk-mcp --data-dir "$RUNNER_TEMP/bsk-mcp" doctor
       - name: Tests
         run: pytest -q

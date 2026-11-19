@@ -41,11 +41,12 @@ basilisk-mcp doctor
 ```
 
 ```
-basilisk-mcp 0.1.0
+basilisk-mcp 0.2.0
 [ok] server python: 3.13.1
 [ok] worker python: /path/to/.venv/bin/python
 [ok] basilisk import: Basilisk 2.12.2 on Python 3.13.1
 [ok] data directory: /home/you/.basilisk-mcp (mode 0o700)
+[ok] vizard: /home/you/Vizard/Vizard.x86_64
 [ok] smoke simulation: basic_orbit for 600 s in 2.9 s
 All checks passed.
 ```
@@ -203,6 +204,8 @@ configuration. See [`configuration.md`](configuration.md) for every setting.
   pointing with three HR16 wheels starting from a 0.05 rad/s tumble. How long until
   it is within 0.5 degree?"*
 * *"Export the script for the last run so I can rerun it myself."*
+* *"Run the reaction-wheel example with Vizard and open it in 3-D."* (needs
+  [Vizard](vizard.md))
 
 The server also provides two prompts, **orbit_study** and **attitude_control_study**,
 that appear in clients supporting MCP prompts (for example, as slash commands in

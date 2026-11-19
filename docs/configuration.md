@@ -32,6 +32,9 @@ run_timeout_s = 300.0
 | `max_file_size_mb` | 512 | Largest file a worker may write (POSIX `RLIMIT_FSIZE`); 0 disables. |
 | `max_log_bytes` | 16 384 | Worker stdout/stderr returned on failure. |
 | `log_level` | `INFO` | Server log level (stderr). |
+| `vizard_path` | auto-detect | Path to `Vizard.exe` / `Vizard.app` / Linux binary for `open_in_vizard` and `basilisk-mcp vizard`. |
+| `vizard_auto_open` | `false` | Open Vizard automatically after `run_simulation(..., vizard=true)`. |
+| `max_vizard_frames` | 20 000 | Frames per Vizard file; the frame period is stretched to stay below it. |
 
 Environment-only:
 
@@ -53,6 +56,7 @@ Environment-only:
                 ├── spec.json         spec snapshot of this run
                 ├── results.npz       recorded data
                 ├── summary.json      Basilisk version, gravity constants, recorder metadata
+                ├── vizard.bin        Vizard 3-D file (runs made with vizard=true)
                 ├── stdout.log / stderr.log
                 ├── plots/plot_*.png
                 └── exports/<recorder>.csv

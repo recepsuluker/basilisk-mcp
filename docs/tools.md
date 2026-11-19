@@ -3,7 +3,7 @@
 All tools return JSON (`structuredContent`) unless noted. Errors are tool results with
 `isError: true` and a JSON body `{"code", "message", "hint"?, "details"?}`.
 
-Error codes: `INVALID_ARGUMENT`, `NOT_FOUND`, `CONFLICT`, `LIMIT_EXCEEDED`,
+Error codes: `INVALID_ARGUMENT`, `NOT_FOUND`, `CONFLICT`, `LIMIT_EXCEEDED`, `VIZARD_NOT_FOUND`,
 `SPEC_INVALID` (with the full `problems` list), `RUN_FAILED` (with the worker's
 stderr tail).
 
@@ -46,15 +46,16 @@ since you read it, the call fails with `CONFLICT` instead of overwriting.
 | Tool | Arguments | Returns |
 |---|---|---|
 | `validate_session` | `session_id`, `duration_s?` | `valid`, `problems[]` (each with a fix hint) |
-| `export_script` | `session_id`, `duration_s` | the standalone Basilisk script (also saved in the data directory) |
+| `export_script` | `session_id`, `duration_s`, `vizard=false` | the standalone Basilisk script (also saved in the data directory) |
 
 ## Running
 
 | Tool | Arguments | Returns |
 |---|---|---|
-| `run_simulation` | `session_id`, `duration_s`, `label?` | run record and an overview (initial/final/min/max) of every recorded variable |
+| `run_simulation` | `session_id`, `duration_s`, `label?`, `vizard=false` | run record and an overview (initial/final/min/max) of every recorded variable; with `vizard=true` the record has `vizard_file` |
 | `list_runs` | `session_id` | run records |
 | `get_run` | `session_id`, `run_id` | record, variables with units, overview |
+| `open_in_vizard` | `session_id`, `run_id?` | launches Basilisk's Vizard on the run's `vizard.bin` (see [vizard.md](vizard.md)); error `VIZARD_NOT_FOUND` with a download link if Vizard is missing |
 
 ## Results (read-only)
 
