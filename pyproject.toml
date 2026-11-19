@@ -1,0 +1,64 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "basilisk-mcp"
+version = "0.1.0"
+description = "Model Context Protocol (MCP) server for the Basilisk astrodynamics simulation framework"
+readme = "README.md"
+license = "ISC"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "Recep Suluker" }]
+keywords = ["basilisk", "astrodynamics", "mcp", "model-context-protocol", "claude", "spacecraft", "attitude-control", "orbit"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Astronomy",
+  "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+  "mcp>=2.3,<3",
+  "numpy>=1.26",
+  "matplotlib>=3.8",
+  "uvicorn>=0.30",
+]
+
+[project.optional-dependencies]
+# Basilisk itself. It may also live in a separate interpreter configured with `python = ...`.
+basilisk = ["bsk>=2.9"]
+test = ["pytest>=8", "pytest-asyncio>=0.23"]
+dev = ["basilisk-mcp[basilisk,test]", "ruff>=0.6"]
+
+[project.scripts]
+basilisk-mcp = "basilisk_mcp.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/recepsuluker/basilisk-mcp"
+Issues = "https://github.com/recepsuluker/basilisk-mcp/issues"
+Basilisk = "https://github.com/AVSLab/basilisk"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/basilisk_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = ["basilisk: requires the bsk package", "slow: long-running simulation test"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S"]
+ignore = ["S101", "S603", "S404", "E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "B"]

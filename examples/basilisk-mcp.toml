@@ -1,0 +1,25 @@
+# basilisk-mcp configuration. All keys are optional; values shown are the defaults.
+# Precedence: defaults < this file < BASILISK_MCP_* environment variables < CLI flags.
+
+[server]
+# Where sessions, generated scripts, results and plots are stored (created with 0700 permissions).
+# data_dir = "~/.basilisk-mcp"
+
+# Python interpreter used for simulation workers. It must have Basilisk installed (pip install bsk).
+# Defaults to the interpreter running the server.
+# python = "/path/to/venv/bin/python"
+
+max_sessions = 16
+max_modules = 32
+max_recorders = 16
+max_runs_per_session = 200
+max_concurrent_runs = 2
+run_timeout_s = 300.0            # wall-clock seconds per run
+max_sim_duration_s = 31557600.0  # simulated seconds per run (one year)
+max_steps = 5000000              # integration steps per task per run
+max_recorded_samples = 200000    # samples per recorder per run
+max_query_points = 2000          # points returned by query_results
+memory_limit_mb = 4096           # worker address-space limit (POSIX), 0 disables
+max_file_size_mb = 512           # largest file a worker may write (POSIX), 0 disables
+max_log_bytes = 16384
+log_level = "INFO"

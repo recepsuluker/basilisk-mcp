@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "basilisk": {
+      "command": "/absolute/path/to/basilisk-mcp/.venv/bin/basilisk-mcp",
+      "args": ["serve"]
+    }
+  }
+}
