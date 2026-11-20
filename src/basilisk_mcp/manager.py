@@ -138,7 +138,7 @@ class Manager:
 
     def get(self, session_id: Any) -> Session:
         if not isinstance(session_id, str) or not SESSION_ID_RE.match(session_id):
-            raise ValidationError(f"Invalid session_id {session_id!r}.", "Session ids look like 's1a2b3c4d'.")
+            raise ValidationError(f"Invalid session {session_id!r}.", "Session ids look like 's1a2b3c4d'.")
         if session_id not in self.sessions:
             raise NotFound("Session", session_id, sorted(self.sessions))
         return self.sessions[session_id]
