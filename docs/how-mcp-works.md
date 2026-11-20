@@ -32,7 +32,7 @@ One server works with every MCP-compatible client.
 
 | Primitive | Who decides to use it | Example in basilisk-mcp |
 |---|---|---|
-| **Tool** | the model, during reasoning | `run_simulation(session_id, duration_s)` |
+| **Tool** | the model, during reasoning | `run_simulation(session, duration_s)` |
 | **Resource** | the application or user (read-only context) | `basilisk://modules` (module catalog) |
 | **Prompt** | the user (a reusable, parameterized workflow) | `attitude_control_study(goal)` |
 
@@ -53,12 +53,12 @@ When Claude connects, it performs a handshake, lists the tools, and later calls 
 // client → server
 {"jsonrpc": "2.0", "id": 7, "method": "tools/call",
  "params": {"name": "analyze_run",
-            "arguments": {"session_id": "s1a2b3c4d", "analysis": "attitude"}}}
+            "arguments": {"session": "s1a2b3c4d", "analysis": "attitude"}}}
 
 // server → client
 {"jsonrpc": "2.0", "id": 7, "result": {
   "content": [{"type": "text", "text": "{\"final_error_deg\": 0.1378, ...}"}],
-  "structuredContent": {"session_id": "s1a2b3c4d", "analysis": "attitude",
+  "structuredContent": {"session": "s1a2b3c4d", "analysis": "attitude",
                         "result": {"final_error_deg": 0.1378, "settling_time_s": 418.0}},
   "isError": false}}
 ```
@@ -118,7 +118,7 @@ schema and the docstring becomes the description:
 
 ```python
 @tool(READ_ONLY)
-def analyze_run(session_id: str, analysis: Literal["orbit", "attitude", "actuators"],
+def analyze_run(session: str, analysis: Literal["orbit", "attitude", "actuators"],
                 recorder: str | None = None, run_id: str | None = None,
                 threshold_deg: float = 1.0) -> dict[str, Any]:
     """Physics analysis of a run.
@@ -227,7 +227,7 @@ User: *"Simulate the Basilisk reaction-wheel example, then make it settle faster
 
 1. Claude calls `list_templates`, picks `attitude_feedback_rw`, and calls
    `create_session(template="attitude_feedback_rw")`.
-2. `run_simulation(session_id, 600)` → validate → generate `scenario.py` → isolated
+2. `run_simulation(session, 600)` → validate → generate `scenario.py` → isolated
    worker → `results.npz` → overview returned.
 3. `analyze_run(..., "attitude")` → settling time 418 s, final error 0.14 deg.
 4. `set_params(..., "control", {"K": 7, "P": 40})`, run again, `compare_runs`,

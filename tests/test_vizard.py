@@ -91,12 +91,12 @@ async def test_open_in_vizard_tool_launches_with_load_file(settings, tmp_path):
     exe, log = fake_vizard(tmp_path)
     settings.vizard_path = str(exe)
     async with Client(create_server(settings)) as client:
-        sid = (await client.call_tool("create_session", {"template": "basic_orbit"})).structured_content["session_id"]
-        err = await client.call_tool("open_in_vizard", {"session_id": sid})
+        sid = (await client.call_tool("create_session", {"template": "basic_orbit"})).structured_content["session"]
+        err = await client.call_tool("open_in_vizard", {"session": sid})
         assert err.is_error and "NOT_FOUND" in err.content[0].text
-        run = await client.call_tool("run_simulation", {"session_id": sid, "duration_s": 600, "vizard": True})
+        run = await client.call_tool("run_simulation", {"session": sid, "duration_s": 600, "vizard": True})
         vizard_file = run.structured_content["run"]["vizard_file"]
-        opened = await client.call_tool("open_in_vizard", {"session_id": sid})
+        opened = await client.call_tool("open_in_vizard", {"session": sid})
         assert not opened.is_error, opened.content[0].text
     assert wait_for(log)
     assert json.loads(log.read_text()) == ["-loadFile", vizard_file]
@@ -129,7 +129,7 @@ async def test_auto_open_after_run(settings, tmp_path):
     settings.vizard_path = str(exe)
     settings.vizard_auto_open = True
     async with Client(create_server(settings)) as client:
-        sid = (await client.call_tool("create_session", {"template": "basic_orbit"})).structured_content["session_id"]
-        run = await client.call_tool("run_simulation", {"session_id": sid, "duration_s": 600, "vizard": True})
+        sid = (await client.call_tool("create_session", {"template": "basic_orbit"})).structured_content["session"]
+        run = await client.call_tool("run_simulation", {"session": sid, "duration_s": 600, "vizard": True})
         assert run.structured_content["vizard"]["launched"] is True
     assert wait_for(log)

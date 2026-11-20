@@ -90,8 +90,8 @@ def create_server(settings: Settings, manager: Manager | None = None) -> MCPServ
 
         return decorate
 
-    def edited(session, result=None) -> dict[str, Any]:
-        out = {"session_id": session.id, "version": session.version}
+    def edited(sess, result=None) -> dict[str, Any]:
+        out = {"session": sess.id, "version": sess.version}
         if result is not None:
             out["result"] = result
         return out
@@ -152,9 +152,9 @@ def create_server(settings: Settings, manager: Manager | None = None) -> MCPServ
           {"sc": {"orbit": {"altitude_km": 700, "inclination_deg": 98}}, "earth": {"j2": true}}
         simulation: {"dt_s": 0.1, "fsw_dt_s": 0.5, "integrator": "rk4" | "rkf45" | "rk2" | "euler" | "rkf78"}
         """
-        session = manager.create_session(name, description, template, overrides, simulation)
-        out = session.info(include_spec=True)
-        out["validation_problems"] = manager.validate(session)
+        sess = manager.create_session(name, description, template, overrides, simulation)
+        out = sess.info(include_spec=True)
+        out["validation_problems"] = manager.validate(sess)
         if template:
             out["suggested_duration_s"] = round(manager.templates()[template]["suggested_duration_s"], 3)
         return out
@@ -165,169 +165,169 @@ def create_server(settings: Settings, manager: Manager | None = None) -> MCPServ
         return [s.info() for s in manager.sessions.values()]
 
     @tool(READ_ONLY)
-    def get_session(session_id: str) -> dict[str, Any]:
+    def get_session(session: str) -> dict[str, Any]:
         """Full session spec (modules, parameters, connections, recorders), version, and runs."""
-        session = manager.get(session_id)
-        out = session.info(include_spec=True)
-        out["runs"] = list(session.runs.values())
+        sess = manager.get(session)
+        out = sess.info(include_spec=True)
+        out["runs"] = list(sess.runs.values())
         return out
 
     @tool(DESTRUCTIVE)
-    def close_session(session_id: str, delete_files: bool = False) -> dict[str, Any]:
+    def close_session(session: str, delete_files: bool = False) -> dict[str, Any]:
         """Close a session. Files (scripts, results) are kept unless delete_files is true."""
-        return manager.close_session(session_id, delete_files)
+        return manager.close_session(session, delete_files)
 
     # ---------------------------------------------------------------- editing
 
     @tool(EDIT)
-    def add_module(session_id: str, name: str, module_type: str, params: dict[str, Any] | None = None,
+    def add_module(session: str, name: str, module_type: str, params: dict[str, Any] | None = None,
                    expected_version: int | None = None) -> dict[str, Any]:
         """Add a catalogued module. Missing parameters take their defaults (see describe_module_type).
 
-        Example: add_module(session_id, "rw", "reaction_wheels", {"attach_to": "sc", "max_momentum_Nms": 50})
+        Example: add_module(session, "rw", "reaction_wheels", {"attach_to": "sc", "max_momentum_Nms": 50})
         """
-        session, result = manager.mutate(
-            session_id, expected_version, lambda sp: S.add_module(sp, name, module_type, params, settings))
-        return edited(session, {"name": name, **result})
+        sess, result = manager.mutate(
+            session, expected_version, lambda sp: S.add_module(sp, name, module_type, params, settings))
+        return edited(sess, {"name": name, **result})
 
     @tool(EDIT)
-    def set_params(session_id: str, name: str, params: dict[str, Any],
+    def set_params(session: str, name: str, params: dict[str, Any],
                    expected_version: int | None = None) -> dict[str, Any]:
         """Change some parameters of an existing module; others keep their current values.
 
         For 'orbit' give the complete orbit object (one of semi_major_axis_km / altitude_km plus elements).
         """
-        session, result = manager.mutate(session_id, expected_version, lambda sp: S.set_params(sp, name, params))
-        return edited(session, {"name": name, **result})
+        sess, result = manager.mutate(session, expected_version, lambda sp: S.set_params(sp, name, params))
+        return edited(sess, {"name": name, **result})
 
     @tool(EDIT)
-    def remove_module(session_id: str, name: str, expected_version: int | None = None) -> dict[str, Any]:
+    def remove_module(session: str, name: str, expected_version: int | None = None) -> dict[str, Any]:
         """Remove a module together with its connections and recorders."""
-        session, result = manager.mutate(session_id, expected_version, lambda sp: S.remove_module(sp, name))
-        return edited(session, result)
+        sess, result = manager.mutate(session, expected_version, lambda sp: S.remove_module(sp, name))
+        return edited(sess, result)
 
     @tool(EDIT)
-    def connect(session_id: str, source: str, target: str, expected_version: int | None = None) -> dict[str, Any]:
+    def connect(session: str, source: str, target: str, expected_version: int | None = None) -> dict[str, Any]:
         """Connect an output port to an input port with the same message type.
 
         source: '<module>.<output port>', target: '<module>.<input port>', e.g. connect(sid, "sc.state", "nav.state").
         """
-        session, result = manager.mutate(session_id, expected_version, lambda sp: S.connect(sp, source, target))
-        return edited(session, result)
+        sess, result = manager.mutate(session, expected_version, lambda sp: S.connect(sp, source, target))
+        return edited(sess, result)
 
     @tool(EDIT)
-    def disconnect(session_id: str, target: str, expected_version: int | None = None) -> dict[str, Any]:
+    def disconnect(session: str, target: str, expected_version: int | None = None) -> dict[str, Any]:
         """Remove the connection feeding the input port 'target' ('<module>.<input port>')."""
-        session, result = manager.mutate(session_id, expected_version, lambda sp: S.disconnect(sp, target))
-        return edited(session, result)
+        sess, result = manager.mutate(session, expected_version, lambda sp: S.disconnect(sp, target))
+        return edited(sess, result)
 
     @tool(EDIT)
-    def add_recorder(session_id: str, name: str, source: str, sample_dt_s: float,
+    def add_recorder(session: str, name: str, source: str, sample_dt_s: float,
                      expected_version: int | None = None) -> dict[str, Any]:
         """Record an output port every sample_dt_s seconds (an integer multiple of its task step).
 
         Example: add_recorder(sid, "states", "sc.state", 10.0)
         """
-        session, result = manager.mutate(
-            session_id, expected_version, lambda sp: S.add_recorder(sp, name, source, sample_dt_s, settings))
-        return edited(session, {"name": name, **result})
+        sess, result = manager.mutate(
+            session, expected_version, lambda sp: S.add_recorder(sp, name, source, sample_dt_s, settings))
+        return edited(sess, {"name": name, **result})
 
     @tool(EDIT)
-    def remove_recorder(session_id: str, name: str, expected_version: int | None = None) -> dict[str, Any]:
+    def remove_recorder(session: str, name: str, expected_version: int | None = None) -> dict[str, Any]:
         """Remove a recorder."""
-        session, _ = manager.mutate(session_id, expected_version, lambda sp: S.remove_recorder(sp, name))
-        return edited(session)
+        sess, _ = manager.mutate(session, expected_version, lambda sp: S.remove_recorder(sp, name))
+        return edited(sess)
 
     @tool(EDIT)
-    def set_simulation(session_id: str, dt_s: float | None = None, fsw_dt_s: float | None = None,
+    def set_simulation(session: str, dt_s: float | None = None, fsw_dt_s: float | None = None,
                        integrator: Literal["rk4", "rk2", "euler", "rkf45", "rkf78"] | None = None,
                        reset_fsw_dt: bool = False, expected_version: int | None = None) -> dict[str, Any]:
         """Set the dynamics step dt_s, the flight-software period fsw_dt_s (reset_fsw_dt makes it follow dt_s) and the integrator."""
-        session, result = manager.mutate(
-            session_id, expected_version,
+        sess, result = manager.mutate(
+            session, expected_version,
             lambda sp: S.set_simulation(sp, dt_s, fsw_dt_s, integrator, clear_fsw_dt=reset_fsw_dt))
-        return edited(session, result)
+        return edited(sess, result)
 
     # ---------------------------------------------------------------- checking
 
     @tool(READ_ONLY)
-    def validate_session(session_id: str, duration_s: float | None = None) -> dict[str, Any]:
+    def validate_session(session: str, duration_s: float | None = None) -> dict[str, Any]:
         """Check the whole session (references, required connections, rates, limits for duration_s)."""
-        session = manager.get(session_id)
-        problems = manager.validate(session, duration_s)
-        return {"session_id": session.id, "version": session.version, "valid": not problems, "problems": problems}
+        sess = manager.get(session)
+        problems = manager.validate(sess, duration_s)
+        return {"session": sess.id, "version": sess.version, "valid": not problems, "problems": problems}
 
     @tool(READ_ONLY)
-    def export_script(session_id: str, duration_s: float, vizard: bool = False) -> dict[str, Any]:
+    def export_script(session: str, duration_s: float, vizard: bool = False) -> dict[str, Any]:
         """Return the standalone Basilisk Python script for this session (exactly what run_simulation executes).
 
         vizard=true includes the lines that write a Vizard 3-D visualization file.
         """
-        session = manager.get(session_id)
-        source = manager.script(session, duration_s, vizard=vizard)
-        path = manager.session_dir(session) / f"scenario_v{session.version}.py"
+        sess = manager.get(session)
+        source = manager.script(sess, duration_s, vizard=vizard)
+        path = manager.session_dir(sess) / f"scenario_v{sess.version}.py"
         path.write_text(source, encoding="utf-8")
-        return {"session_id": session.id, "version": session.version, "path": str(path),
+        return {"session": sess.id, "version": sess.version, "path": str(path),
                 "lines": source.count("\n") + 1, "script": source}
 
     # ---------------------------------------------------------------- running
 
     @tool(RUN)
-    async def run_simulation(session_id: str, duration_s: float, label: str | None = None,
+    async def run_simulation(session: str, duration_s: float, label: str | None = None,
                              vizard: bool = False) -> dict[str, Any]:
         """Validate, generate and run the simulation for duration_s simulated seconds in an isolated worker.
 
         vizard=true also records a Vizard 3-D visualization file (vizard.bin); open it with open_in_vizard.
         Returns the run record and a compact overview (initial/final/min/max) of every recorded variable.
         """
-        record = await manager.run(session_id, duration_s, label, vizard=vizard)
-        _, _, data = manager.run_data(session_id, record["run_id"])
-        out = {"session_id": session_id, "run": record, "overview": R.run_overview(data)}
+        record = await manager.run(session, duration_s, label, vizard=vizard)
+        _, _, data = manager.run_data(session, record["run_id"])
+        out = {"session": session, "run": record, "overview": R.run_overview(data)}
         if vizard and record.get("vizard_file") and settings.vizard_auto_open:
             try:
-                out["vizard"] = launch_vizard(settings, manager.vizard_file(session_id, record["run_id"]))
+                out["vizard"] = launch_vizard(settings, manager.vizard_file(session, record["run_id"]))
             except BskMcpError as exc:
                 out["vizard"] = exc.as_dict()
         return out
 
     @tool(RUN)
-    def open_in_vizard(session_id: str, run_id: str | None = None) -> dict[str, Any]:
+    def open_in_vizard(session: str, run_id: str | None = None) -> dict[str, Any]:
         """Open a run's 3-D visualization in Basilisk's Vizard app on this computer (default: latest Vizard run).
 
         The run must have been made with run_simulation(..., vizard=true).
         """
-        return launch_vizard(settings, manager.vizard_file(session_id, run_id))
+        return launch_vizard(settings, manager.vizard_file(session, run_id))
 
     @tool(READ_ONLY)
-    def list_runs(session_id: str) -> list[dict[str, Any]]:
+    def list_runs(session: str) -> list[dict[str, Any]]:
         """List the runs of a session."""
-        return list(manager.get(session_id).runs.values())
+        return list(manager.get(session).runs.values())
 
     @tool(READ_ONLY)
-    def get_run(session_id: str, run_id: str) -> dict[str, Any]:
+    def get_run(session: str, run_id: str) -> dict[str, Any]:
         """Run record, recorded variables with units, and an overview of the results."""
-        session, run_id, data = manager.run_data(session_id, run_id)
-        return {"run": session.runs[run_id],
+        sess, run_id, data = manager.run_data(session, run_id)
+        return {"run": sess.runs[run_id],
                 "recorders": {r: data.variables(r) for r in data.recorders()},
                 "overview": R.run_overview(data)}
 
     # ---------------------------------------------------------------- results
 
     @tool(READ_ONLY)
-    def query_results(session_id: str, recorder: str, run_id: str | None = None,
+    def query_results(session: str, recorder: str, run_id: str | None = None,
                       variables: list[str] | None = None, max_points: int = 200,
                       t_start_s: float | None = None, t_end_s: float | None = None) -> dict[str, Any]:
         """Down-sampled time series of recorded (or derived) variables. run_id defaults to the latest run.
 
         Derived variables include attitude_error_deg, radius_km, speed_kmps, wheel_speeds_rpm, torque_norm_Nm.
         """
-        _, rid, data = manager.run_data(session_id, run_id)
+        _, rid, data = manager.run_data(session, run_id)
         out = R.query(data, recorder, variables, clamp_points(max_points), t_start_s, t_end_s)
         out["run_id"] = rid
         return out
 
     @tool(READ_ONLY)
-    def analyze_run(session_id: str, analysis: Literal["orbit", "attitude", "actuators"],
+    def analyze_run(session: str, analysis: Literal["orbit", "attitude", "actuators"],
                     recorder: str | None = None, run_id: str | None = None,
                     threshold_deg: float = 1.0) -> dict[str, Any]:
         """Physics analysis of a run.
@@ -336,8 +336,8 @@ def create_server(settings: Settings, manager: Manager | None = None) -> MCPServ
         attitude: error, settling time below threshold_deg, final rate error from an AttGuidMsg recorder.
         actuators: wheel speed vs. limit, motor torque peaks/RMS, commanded torque and impulse.
         """
-        session, rid, data = manager.run_data(session_id, run_id)
-        spec = manager.run_spec(session, rid)
+        sess, rid, data = manager.run_data(session, run_id)
+        spec = manager.run_spec(sess, rid)
         wanted = {"orbit": ("SCStatesMsg", "NavTransMsg"), "attitude": ("AttGuidMsg",)}.get(analysis)
         if analysis != "actuators" and recorder is None:
             candidates = [r for r, m in data.recorders().items() if m["msg_type"] in wanted]
@@ -352,10 +352,10 @@ def create_server(settings: Settings, manager: Manager | None = None) -> MCPServ
             result = R.analyze_attitude(data, recorder, threshold_deg)
         else:
             result = R.analyze_actuators(data, spec)
-        return {"session_id": session.id, "run_id": rid, "analysis": analysis, "result": result}
+        return {"session": sess.id, "run_id": rid, "analysis": analysis, "result": result}
 
     @tool(READ_ONLY)
-    def plot_results(session_id: str, series: list[str], run_ids: list[str] | None = None,
+    def plot_results(session: str, series: list[str], run_ids: list[str] | None = None,
                      title: str | None = None,
                      time_unit: Literal["s", "min", "h", "day"] = "s") -> list[ImageContent | TextContent]:
         """Plot one or more series ('recorder.variable' or 'recorder.variable[i]') as a PNG.
@@ -364,9 +364,9 @@ def create_server(settings: Settings, manager: Manager | None = None) -> MCPServ
         """
         if not series or len(series) > 8:
             raise ValidationError("Give between 1 and 8 series.")
-        session = manager.get(session_id)
-        runs = _load_runs(session, run_ids)
-        directory = manager.run_dir(session, next(iter(runs))) / "plots"
+        sess = manager.get(session)
+        runs = _load_runs(sess, run_ids)
+        directory = manager.run_dir(sess, next(iter(runs))) / "plots"
         directory.mkdir(exist_ok=True)
         path = directory / f"plot_{int(time.time() * 1000)}.png"
         png = R.plot(runs, series, title, path, time_unit)
@@ -378,32 +378,32 @@ def create_server(settings: Settings, manager: Manager | None = None) -> MCPServ
                                                      "runs": list(runs)})),
         ]
 
-    def _load_runs(session, run_ids):
+    def _load_runs(sess, run_ids):
         if not run_ids:
-            _, rid, data = manager.run_data(session.id, None)
+            _, rid, data = manager.run_data(sess.id, None)
             return {rid: data}
         if len(run_ids) > 6:
             raise LimitExceeded("Compare at most 6 runs at once.")
         out = {}
         for rid in run_ids:
-            _, rid2, data = manager.run_data(session.id, rid)
+            _, rid2, data = manager.run_data(sess.id, rid)
             out[rid2] = data
         return out
 
     @tool(READ_ONLY)
-    def compare_runs(session_id: str, run_ids: list[str], series: str) -> dict[str, Any]:
+    def compare_runs(session: str, run_ids: list[str], series: str) -> dict[str, Any]:
         """Compare one series across runs (the first run is the baseline): finals, peaks, RMS/max differences."""
         if len(run_ids) < 2:
             raise ValidationError("Give at least two run_ids.")
-        session = manager.get(session_id)
-        return R.compare(_load_runs(session, run_ids), series)
+        sess = manager.get(session)
+        return R.compare(_load_runs(sess, run_ids), series)
 
     @tool(READ_ONLY)
-    def export_results(session_id: str, recorder: str, run_id: str | None = None) -> dict[str, Any]:
+    def export_results(session: str, recorder: str, run_id: str | None = None) -> dict[str, Any]:
         """Write a recorder's full-resolution data to CSV inside the server data directory and return the path."""
-        session, rid, data = manager.run_data(session_id, run_id)
+        sess, rid, data = manager.run_data(session, run_id)
         data.recorder(recorder)
-        directory = manager.run_dir(session, rid) / "exports"
+        directory = manager.run_dir(sess, rid) / "exports"
         directory.mkdir(exist_ok=True)
         out = R.export_csv(data, recorder, directory / f"{recorder}.csv")
         out["run_id"] = rid
@@ -416,10 +416,10 @@ def create_server(settings: Settings, manager: Manager | None = None) -> MCPServ
     def module_catalog() -> str:
         return json.dumps({name: mt.describe() for name, mt in MODULE_TYPES.items()}, indent=2)
 
-    @server.resource("basilisk://sessions/{session_id}/spec", name="session-spec", mime_type="application/json",
+    @server.resource("basilisk://sessions/{session}/spec", name="session-spec", mime_type="application/json",
                      description="Current spec of a session.")
-    def session_spec(session_id: str) -> str:
-        return json.dumps(manager.get(session_id).info(include_spec=True), indent=2)
+    def session_spec(session: str) -> str:
+        return json.dumps(manager.get(session).info(include_spec=True), indent=2)
 
     # ---------------------------------------------------------------- prompts
 

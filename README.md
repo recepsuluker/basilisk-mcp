@@ -158,7 +158,7 @@ then two retuned controllers:
 | Results | `query_results`, `analyze_run`, `plot_results`, `compare_runs`, `export_results` |
 
 Prompts: `orbit_study`, `attitude_control_study`. Resources: `basilisk://modules`,
-`basilisk://sessions/{session_id}/spec`. Full reference: [docs/tools.md](docs/tools.md).
+`basilisk://sessions/{session}/spec`. Full reference: [docs/tools.md](docs/tools.md).
 
 ## Module catalog
 

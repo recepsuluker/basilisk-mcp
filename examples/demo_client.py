@@ -50,16 +50,16 @@ async def orbit_study(client, report):
     session = await call(client, "create_session", name="LEO J2 study", template="basic_orbit", overrides={
         "sc": {"orbit": {"altitude_km": 700.0, "eccentricity": 0.001, "inclination_deg": 98.19,
                          "raan_deg": 30.0, "arg_periapsis_deg": 0.0, "true_anomaly_deg": 0.0}}})
-    sid = session["session_id"]
-    await call(client, "remove_recorder", session_id=sid, name="states")
-    await call(client, "add_recorder", session_id=sid, name="states", source="sc.state", sample_dt_s=60.0)
+    sid = session["session"]
+    await call(client, "remove_recorder", session=sid, name="states")
+    await call(client, "add_recorder", session=sid, name="states", source="sc.state", sample_dt_s=60.0)
     duration = 3 * 86400.0  # [s]
-    await call(client, "run_simulation", session_id=sid, duration_s=duration, label="point mass")
-    await call(client, "set_params", session_id=sid, name="earth", params={"j2": True})
-    await call(client, "run_simulation", session_id=sid, duration_s=duration, label="J2")
-    point = (await call(client, "analyze_run", session_id=sid, analysis="orbit", run_id="r001"))["result"]
-    j2 = (await call(client, "analyze_run", session_id=sid, analysis="orbit", run_id="r002"))["result"]
-    image = await plot(client, "orbit_j2_raan.png", session_id=sid, run_ids=["r001", "r002"],
+    await call(client, "run_simulation", session=sid, duration_s=duration, label="point mass")
+    await call(client, "set_params", session=sid, name="earth", params={"j2": True})
+    await call(client, "run_simulation", session=sid, duration_s=duration, label="J2")
+    point = (await call(client, "analyze_run", session=sid, analysis="orbit", run_id="r001"))["result"]
+    j2 = (await call(client, "analyze_run", session=sid, analysis="orbit", run_id="r002"))["result"]
+    image = await plot(client, "orbit_j2_raan.png", session=sid, run_ids=["r001", "r002"],
                        series=["states.raan_deg", "states.radius_km"], time_unit="h",
                        title="700 km sun-synchronous orbit: point-mass vs. J2")
     report += [
@@ -95,24 +95,24 @@ async def orbit_study(client, report):
 async def attitude_study(client, report):
     """Example 2: reaction-wheel attitude control and gain tuning."""
     session = await call(client, "create_session", name="RW attitude", template="attitude_feedback_rw")
-    sid = session["session_id"]
+    sid = session["session"]
     runs = {"r001": "K=3.5, P=30 (Basilisk example)", "r002": "K=7, P=40", "r003": "K=12, P=60"}
-    await call(client, "run_simulation", session_id=sid, duration_s=600.0, label=runs["r001"])
-    await call(client, "set_params", session_id=sid, name="control", params={"K": 7.0, "P": 40.0})
-    await call(client, "run_simulation", session_id=sid, duration_s=600.0, label=runs["r002"])
-    await call(client, "set_params", session_id=sid, name="control", params={"K": 12.0, "P": 60.0})
-    await call(client, "run_simulation", session_id=sid, duration_s=600.0, label=runs["r003"])
+    await call(client, "run_simulation", session=sid, duration_s=600.0, label=runs["r001"])
+    await call(client, "set_params", session=sid, name="control", params={"K": 7.0, "P": 40.0})
+    await call(client, "run_simulation", session=sid, duration_s=600.0, label=runs["r002"])
+    await call(client, "set_params", session=sid, name="control", params={"K": 12.0, "P": 60.0})
+    await call(client, "run_simulation", session=sid, duration_s=600.0, label=runs["r003"])
     rows = []
     for rid, label in runs.items():
-        att = (await call(client, "analyze_run", session_id=sid, analysis="attitude", run_id=rid))["result"]
-        act = (await call(client, "analyze_run", session_id=sid, analysis="actuators", run_id=rid))["result"]
+        att = (await call(client, "analyze_run", session=sid, analysis="attitude", run_id=rid))["result"]
+        act = (await call(client, "analyze_run", session=sid, analysis="actuators", run_id=rid))["result"]
         settle = f"{att['settling_time_s']:.0f}" if att["settled"] else "not settled"
         rows.append(f"| {label} | {att['initial_error_deg']:.1f} | {settle} | {att['final_error_deg']:.4f} "
                     f"| {max(act['rw_speed_log']['max_abs_speed_rpm']):.0f} "
                     f"| {max(act['rw_torque_log']['max_abs_torque_Nm']):.3f} |")
-    image1 = await plot(client, "attitude_rw_error.png", session_id=sid, run_ids=list(runs),
+    image1 = await plot(client, "attitude_rw_error.png", session=sid, run_ids=list(runs),
                         series=["att_error_log.attitude_error_deg"], title="Attitude error for three gain sets")
-    image2 = await plot(client, "attitude_rw_wheels.png", session_id=sid, run_ids=["r001"],
+    image2 = await plot(client, "attitude_rw_wheels.png", session=sid, run_ids=["r001"],
                         series=["rw_speed_log.wheel_speeds_rpm", "rw_torque_log.motorTorque"],
                         title="Wheel speeds and motor torques (Basilisk example gains)")
     report += [
@@ -139,13 +139,13 @@ async def attitude_study(client, report):
 async def nadir_study(client, report):
     """Example 3: nadir pointing in LEO."""
     session = await call(client, "create_session", name="Nadir pointing", template="nadir_pointing_rw")
-    sid = session["session_id"]
-    await call(client, "run_simulation", session_id=sid, duration_s=900.0)
-    att = (await call(client, "analyze_run", session_id=sid, analysis="attitude", threshold_deg=0.5))["result"]
-    image = await plot(client, "nadir_pointing.png", session_id=sid,
+    sid = session["session"]
+    await call(client, "run_simulation", session=sid, duration_s=900.0)
+    att = (await call(client, "analyze_run", session=sid, analysis="attitude", threshold_deg=0.5))["result"]
+    image = await plot(client, "nadir_pointing.png", session=sid,
                        series=["att_error_log.attitude_error_deg", "rw_speed_log.wheel_speeds_rpm"],
                        title="Nadir (Hill frame) pointing from a tumble, 500 km LEO")
-    script = await call(client, "export_script", session_id=sid, duration_s=900.0)
+    script = await call(client, "export_script", session=sid, duration_s=900.0)
     report += [
         "## 3. Nadir pointing from a tumble",
         "",

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1 — 2026-11-20
+
+* **Breaking (tool arguments):** the session argument of every tool is now named `session` instead of
+  `session_id`, and results report `"session"`. Claude Desktop's local MCP bridge treats `session_id` as a
+  reserved name and drops it, which made every session tool fail there. A test now forbids `session_id` as a
+  tool parameter.
+
 ## 0.2.0 — 2026-11-19
 
 * Vizard 3-D visualization: `run_simulation(..., vizard=true)` records `vizard.bin` (spacecraft, planet,

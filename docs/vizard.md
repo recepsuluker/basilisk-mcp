@@ -9,8 +9,8 @@ file for any run and open it in Vizard with one call, one command, or one click.
 "Run the reaction-wheel example and show it in 3-D"
         │
         ▼
-run_simulation(session_id, 600, vizard=true)   → runs/r001/vizard.bin
-open_in_vizard(session_id)                     → Vizard -loadFile .../vizard.bin
+run_simulation(session, 600, vizard=true)   → runs/r001/vizard.bin
+open_in_vizard(session)                     → Vizard -loadFile .../vizard.bin
 ```
 
 ## 1. Install Vizard (once)

@@ -25,37 +25,37 @@ since you read it, the call fails with `CONFLICT` instead of overwriting.
 |---|---|---|
 | `create_session` | `name?`, `template?`, `description?`, `overrides?`, `simulation?` | `overrides = {"<module>": {<params>}}`; returns the spec, validation problems and the template's suggested duration |
 | `list_sessions` | – | read-only |
-| `get_session` | `session_id` | full spec, version, runs |
-| `close_session` | `session_id`, `delete_files=false` | **destructive**; keeps files unless `delete_files` |
+| `get_session` | `session` | full spec, version, runs |
+| `close_session` | `session`, `delete_files=false` | **destructive**; keeps files unless `delete_files` |
 
 ## Editing
 
 | Tool | Arguments | Example |
 |---|---|---|
-| `add_module` | `session_id`, `name`, `module_type`, `params?` | `add_module(sid, "rw", "reaction_wheels", {"attach_to": "sc"})` |
-| `set_params` | `session_id`, `name`, `params` | `set_params(sid, "control", {"K": 7.0, "P": 40.0})` |
-| `remove_module` | `session_id`, `name` | also removes its connections and recorders |
-| `connect` | `session_id`, `source`, `target` | `connect(sid, "rw_torque.motor_torque", "rw.motor_torque")` |
-| `disconnect` | `session_id`, `target` | `disconnect(sid, "att_error.ref")` |
-| `add_recorder` | `session_id`, `name`, `source`, `sample_dt_s` | `add_recorder(sid, "states", "sc.state", 10.0)` |
-| `remove_recorder` | `session_id`, `name` | |
-| `set_simulation` | `session_id`, `dt_s?`, `fsw_dt_s?`, `integrator?`, `reset_fsw_dt?` | integrators: `rk4` (default), `rk2`, `euler`, `rkf45`, `rkf78` |
+| `add_module` | `session`, `name`, `module_type`, `params?` | `add_module(sid, "rw", "reaction_wheels", {"attach_to": "sc"})` |
+| `set_params` | `session`, `name`, `params` | `set_params(sid, "control", {"K": 7.0, "P": 40.0})` |
+| `remove_module` | `session`, `name` | also removes its connections and recorders |
+| `connect` | `session`, `source`, `target` | `connect(sid, "rw_torque.motor_torque", "rw.motor_torque")` |
+| `disconnect` | `session`, `target` | `disconnect(sid, "att_error.ref")` |
+| `add_recorder` | `session`, `name`, `source`, `sample_dt_s` | `add_recorder(sid, "states", "sc.state", 10.0)` |
+| `remove_recorder` | `session`, `name` | |
+| `set_simulation` | `session`, `dt_s?`, `fsw_dt_s?`, `integrator?`, `reset_fsw_dt?` | integrators: `rk4` (default), `rk2`, `euler`, `rkf45`, `rkf78` |
 
 ## Checking (read-only)
 
 | Tool | Arguments | Returns |
 |---|---|---|
-| `validate_session` | `session_id`, `duration_s?` | `valid`, `problems[]` (each with a fix hint) |
-| `export_script` | `session_id`, `duration_s`, `vizard=false` | the standalone Basilisk script (also saved in the data directory) |
+| `validate_session` | `session`, `duration_s?` | `valid`, `problems[]` (each with a fix hint) |
+| `export_script` | `session`, `duration_s`, `vizard=false` | the standalone Basilisk script (also saved in the data directory) |
 
 ## Running
 
 | Tool | Arguments | Returns |
 |---|---|---|
-| `run_simulation` | `session_id`, `duration_s`, `label?`, `vizard=false` | run record and an overview (initial/final/min/max) of every recorded variable; with `vizard=true` the record has `vizard_file` |
-| `list_runs` | `session_id` | run records |
-| `get_run` | `session_id`, `run_id` | record, variables with units, overview |
-| `open_in_vizard` | `session_id`, `run_id?` | launches Basilisk's Vizard on the run's `vizard.bin` (see [vizard.md](vizard.md)); error `VIZARD_NOT_FOUND` with a download link if Vizard is missing |
+| `run_simulation` | `session`, `duration_s`, `label?`, `vizard=false` | run record and an overview (initial/final/min/max) of every recorded variable; with `vizard=true` the record has `vizard_file` |
+| `list_runs` | `session` | run records |
+| `get_run` | `session`, `run_id` | record, variables with units, overview |
+| `open_in_vizard` | `session`, `run_id?` | launches Basilisk's Vizard on the run's `vizard.bin` (see [vizard.md](vizard.md)); error `VIZARD_NOT_FOUND` with a download link if Vizard is missing |
 
 ## Results (read-only)
 
@@ -64,11 +64,11 @@ or `"recorder.variable[i]"` for one component.
 
 | Tool | Arguments | Returns |
 |---|---|---|
-| `query_results` | `session_id`, `recorder`, `run_id?`, `variables?`, `max_points=200`, `t_start_s?`, `t_end_s?` | down-sampled time series |
-| `analyze_run` | `session_id`, `analysis` (`orbit`/`attitude`/`actuators`), `recorder?`, `run_id?`, `threshold_deg=1` | physics analysis (see below) |
-| `plot_results` | `session_id`, `series[]` (1–8), `run_ids?` (≤6), `title?`, `time_unit` (`s`/`min`/`h`/`day`) | PNG image + saved path |
-| `compare_runs` | `session_id`, `run_ids[]` (≥2), `series` | finals, peaks, RMS/max differences vs. the first run |
-| `export_results` | `session_id`, `recorder`, `run_id?` | CSV path in the data directory |
+| `query_results` | `session`, `recorder`, `run_id?`, `variables?`, `max_points=200`, `t_start_s?`, `t_end_s?` | down-sampled time series |
+| `analyze_run` | `session`, `analysis` (`orbit`/`attitude`/`actuators`), `recorder?`, `run_id?`, `threshold_deg=1` | physics analysis (see below) |
+| `plot_results` | `session`, `series[]` (1–8), `run_ids?` (≤6), `title?`, `time_unit` (`s`/`min`/`h`/`day`) | PNG image + saved path |
+| `compare_runs` | `session`, `run_ids[]` (≥2), `series` | finals, peaks, RMS/max differences vs. the first run |
+| `export_results` | `session`, `recorder`, `run_id?` | CSV path in the data directory |
 
 ### Analyses
 
@@ -87,7 +87,7 @@ or `"recorder.variable[i]"` for one component.
 | URI | Content |
 |---|---|
 | `basilisk://modules` | full module catalog (JSON) |
-| `basilisk://sessions/{session_id}/spec` | current spec of a session |
+| `basilisk://sessions/{session}/spec` | current spec of a session |
 
 ## Prompts
 

@@ -63,7 +63,7 @@ class Session:
 
     def info(self, include_spec: bool = False) -> dict[str, Any]:
         out = {
-            "session_id": self.id,
+            "session": self.id,
             "name": self.name,
             "description": self.description,
             "created": self.created,
