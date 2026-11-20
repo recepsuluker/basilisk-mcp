@@ -46,6 +46,9 @@ standalone Basilisk script that produced them.
 * **3-D visualization in one click.** Any run can also record a
   [Vizard](https://avslab.github.io/basilisk/Vizard/Vizard.html) file; `open_in_vizard`,
   `basilisk-mcp vizard` or a desktop shortcut opens it. See [docs/vizard.md](docs/vizard.md).
+* **One-click scenarios.** `basilisk-mcp run attitude_feedback_rw` runs a template (or a session
+  you built with Claude), prints a summary and opens Vizard; put it behind a desktop shortcut. See
+  [docs/one-click.md](docs/one-click.md).
 * **Self-correcting errors.** Every error says what was wrong and what a valid call
   looks like, so Claude can fix its own mistakes.
 
@@ -186,7 +189,7 @@ pip install -e ".[dev]"
 pytest
 ```
 
-The suite (92 tests) covers:
+The suite (99 tests) covers:
 
 * **Physics.** Reproduction of the official `scenarioAttitudeFeedbackRW.py` (attitude
   error, wheel speeds, motor torques) and `scenarioBasicOrbit.py` (position and

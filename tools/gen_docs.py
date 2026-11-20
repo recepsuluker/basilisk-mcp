@@ -30,7 +30,7 @@ def render() -> str:
         "",
         "Every module type the server can place in a session. Parameters use SI units; the unit is part of "
         "the name. `ref` parameters name another module in the same session. Ports are connected with "
-        "`connect(session_id, \"<module>.<output>\", \"<module>.<input>\")`; both ends must carry the same "
+        "`connect(session, \"<module>.<output>\", \"<module>.<input>\")`; both ends must carry the same "
         "message type.",
         "",
         "| Type | Category | Basilisk class | Summary |",

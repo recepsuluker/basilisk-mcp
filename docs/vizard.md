@@ -93,6 +93,11 @@ Double-click it after Claude has run a simulation with Vizard enabled.
 
 Create an alias or a desktop launcher that runs `basilisk-mcp vizard`.
 
+## One-click scenarios
+
+`basilisk-mcp run <template or session>` runs a scenario and opens it in Vizard in one
+step; see [one-click.md](one-click.md) for desktop shortcuts.
+
 ## What is recorded
 
 * All spacecraft in the session, their attitude and body axes, labels.

@@ -227,9 +227,12 @@ class Manager:
         version = session.version
         source = self.script(session, duration_s, vizard=vizard)
         async with self._lock(session_id):
-            run_id = f"r{len(session.runs) + 1:03d}"
-            while run_id in session.runs:  # pragma: no cover
-                run_id = f"r{int(run_id[1:]) + 1:03d}"
+            # Skip ids already used in memory *or* on disk (another process may share the data directory).
+            runs_root = self.session_dir(session) / "runs"
+            number = len(session.runs) + 1
+            while f"r{number:03d}" in session.runs or (runs_root / f"r{number:03d}").exists():
+                number += 1
+            run_id = f"r{number:03d}"
             run_dir = _private_dir(self.session_dir(session) / "runs" / run_id)
             (run_dir / "scenario.py").write_text(source, encoding="utf-8")
             _write_json(run_dir / "spec.json", spec_snapshot)

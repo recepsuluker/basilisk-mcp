@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0 — 2026-11-20
+
+* `basilisk-mcp run <template|session>`: one-click scenario runs with a console summary (attitude error and
+  settling time, orbit period/altitude/RAAN rate, peak wheel speed) and Vizard opening; `--duration`,
+  `--no-vizard`, `--no-open`, `--pause`. Template runs reuse one session per template; session runs execute a
+  fresh copy so sessions held by Claude's server are never modified from outside.
+* Run ids skip run folders that already exist on disk, so the CLI and a running server cannot overwrite each
+  other's results.
+* docs/one-click.md with a Windows script that creates desktop shortcuts.
+
 ## 0.2.1 — 2026-11-20
 
 * **Breaking (tool arguments):** the session argument of every tool is now named `session` instead of

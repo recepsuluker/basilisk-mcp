@@ -146,6 +146,92 @@ def cmd_doctor(args) -> int:
     return 0 if ok else 1
 
 
+def _summarize(manager, session_id: str, run_id: str) -> list[str]:
+    """Short human-readable summary of a run for the console."""
+    from . import results as R
+
+    session, _, data = manager.run_data(session_id, run_id)
+    spec = manager.run_spec(session, run_id)
+    lines = []
+    for rec, meta in data.recorders().items():
+        if meta["msg_type"] == "AttGuidMsg":
+            a = R.analyze_attitude(data, rec, 1.0)
+            settle = f"{a['settling_time_s']:.0f} s" if a["settled"] else "not settled"
+            lines.append(f"  attitude error  {a['initial_error_deg']:.2f} deg -> {a['final_error_deg']:.4f} deg "
+                         f"(below 1 deg after {settle})")
+        elif meta["msg_type"] == "SCStatesMsg":
+            try:
+                o = R.analyze_orbit(data, rec, spec)
+            except BskMcpError:  # e.g. no gravity attached: nothing to summarize
+                continue
+            raan = o["elements"]["raan_deg"].get("mean_rate_deg_per_day")
+            if o["time_span_s"] < 3 * o["orbital_period_s"]:
+                raan = None  # a mean rate from less than three orbits is dominated by short-period terms
+            lines.append(f"  orbit           period {o['orbital_period_s'] / 60:.2f} min, altitude "
+                         f"{o['periapsis_altitude_km']:.1f}-{o['apoapsis_altitude_km']:.1f} km"
+                         + (f", RAAN rate {raan:.4f} deg/day" if raan is not None else ""))
+        elif meta["msg_type"] == "RWSpeedMsg":
+            rpm = data.get(rec, "wheel_speeds_rpm")
+            lines.append(f"  wheels          peak speed {abs(rpm).max():.0f} rpm")
+    return lines
+
+
+def cmd_run(args) -> int:
+    """One click: run a template or a saved session, print a summary, open the result in Vizard."""
+    settings = load_settings(args.config, data_dir=args.data_dir, python=args.python)
+    from .manager import SESSION_ID_RE, Manager, replay
+    from .templates import TEMPLATES
+    from .vizard import launch
+
+    def finish(code: int) -> int:
+        if args.pause:
+            try:
+                input("\nPress Enter to close...")
+            except EOFError:
+                pass
+        return code
+
+    manager = Manager(settings)
+    scenario = args.scenario
+    if SESSION_ID_RE.match(scenario):
+        # Run a fresh copy of the session's current spec in a dedicated one-click session, so a session that
+        # Claude's running server holds in memory is never modified from outside.
+        source = manager.get(scenario)
+        previous = [r["duration_s"] for r in source.runs.values() if r.get("status") == "completed"]
+        duration = args.duration or (previous[-1] if previous else None)
+        if duration is None:
+            print("This session has no completed run yet; pass --duration SECONDS.", file=sys.stderr)
+            return finish(2)
+        name = f"one-click {source.id}"
+        session = next((s for s in manager.sessions.values() if s.name == name), None)
+        if session is None:
+            session = manager.create_session(name=name, description=f"One-click copy of '{source.name}'.")
+        manager.mutate(session.id, None, lambda spec: spec.update(replay(source.spec, settings)))
+    elif scenario in TEMPLATES:
+        name = f"one-click {scenario}"
+        session = next((s for s in manager.sessions.values() if s.name == name and s.template == scenario), None)
+        if session is None:
+            session = manager.create_session(name=name, template=scenario,
+                                             description="Created by `basilisk-mcp run`.")
+        duration = args.duration or TEMPLATES[scenario]["suggested_duration_s"]
+    else:
+        print(f"Unknown scenario {scenario!r}. Use a template ({', '.join(TEMPLATES)}) "
+              "or a session id such as s1a2b3c4d (ask Claude for the id of a session you built).", file=sys.stderr)
+        return finish(2)
+
+    vizard = not args.no_vizard
+    print(f"Running '{session.name}' ({session.id}) for {duration:.0f} s"
+          + (" with Vizard" if vizard else "") + "...")
+    record = asyncio.run(manager.run(session.id, float(duration), label="one-click", vizard=vizard))
+    print(f"Run {record['run_id']} completed in {record['wall_time_s']:.1f} s (Basilisk {record['basilisk_version']})")
+    for line in _summarize(manager, session.id, record["run_id"]):
+        print(line)
+    if vizard and record.get("vizard_file") and not args.no_open:
+        result = launch(settings, manager.vizard_file(session.id, record["run_id"]))
+        print(f"Opened Vizard: {result['file']}")
+    return finish(0)
+
+
 def cmd_vizard(args) -> int:
     """Open the latest (or a chosen) run in Vizard: suitable for a desktop shortcut."""
     settings = load_settings(args.config, data_dir=args.data_dir, python=args.python)
@@ -218,6 +304,14 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("path", nargs="?", default="basilisk-mcp.toml")
     init.add_argument("--force", action="store_true")
     init.set_defaults(func=cmd_init_config)
+
+    run = sub.add_parser("run", help="one click: run a template or saved session and open it in Vizard")
+    run.add_argument("scenario", help="template name (e.g. attitude_feedback_rw) or session id (e.g. s1a2b3c4d)")
+    run.add_argument("--duration", type=float, help="simulated seconds (default: template suggestion / last run)")
+    run.add_argument("--no-vizard", action="store_true", help="do not record a Vizard file")
+    run.add_argument("--no-open", action="store_true", help="record the Vizard file but do not open Vizard")
+    run.add_argument("--pause", action="store_true", help="wait for Enter before closing (for desktop shortcuts)")
+    run.set_defaults(func=cmd_run)
 
     viz = sub.add_parser("vizard", help="open the latest run (or --session/--run) in Vizard")
     viz.add_argument("--session", help="session id (default: newest Vizard file of any session)")
