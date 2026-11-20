@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "basilisk-mcp"
-version = "0.3.0"
+version = "0.4.0"
 description = "Model Context Protocol (MCP) server for the Basilisk astrodynamics simulation framework"
 readme = "README.md"
 license = "ISC"
@@ -55,6 +55,7 @@ markers = ["basilisk: requires the bsk package", "slow: long-running simulation 
 [tool.ruff]
 line-length = 120
 target-version = "py311"
+extend-exclude = ["tools/visuals"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "S"]

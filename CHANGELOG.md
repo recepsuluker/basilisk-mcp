@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0 — 2026-11-20
+
+* `basilisk-mcp install-claude`: adds the server to Claude Desktop's configuration (Windows, including the
+  Microsoft Store layout, macOS and Linux), keeps other servers and settings, writes a backup and BOM-free
+  UTF-8; `--vizard-auto-open`, `--dry-run`, `--config-file`.
+* README rewritten for end users with a hero image, a 5-minute setup and troubleshooting.
+* New images generated from real runs (`docs/images/hero.png`, `j2_orbit_planes.png`, `attitude_gains.png`,
+  social cards) and the scripts that make them (`tools/visuals/`).
+
 ## 0.3.0 — 2026-11-20
 
 * `basilisk-mcp run <template|session>`: one-click scenario runs with a console summary (attitude error and

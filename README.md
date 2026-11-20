@@ -1,231 +1,204 @@
-# basilisk-mcp
-
-**A [Model Context Protocol](https://modelcontextprotocol.io) server for the
-[Basilisk](https://github.com/AVSLab/basilisk) astrodynamics simulation framework.**
-
-[![CI](https://github.com/recepsuluker/basilisk-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/recepsuluker/basilisk-mcp/actions/workflows/ci.yml)
-[![License: ISC](https://img.shields.io/badge/license-ISC-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)
-
-basilisk-mcp lets Claude (or any MCP client) build, run and analyze Basilisk
-spacecraft simulations from a conversation:
-
-> *"Run the Basilisk reaction-wheel attitude example, then tune the gains so it
-> settles below 1° faster without exceeding 4000 rpm, and plot the comparison."*
-
-Claude assembles the scenario from validated building blocks, runs it with real
-Basilisk in an isolated process, analyzes the results, and can hand you the exact
-standalone Basilisk script that produced them.
-
 <p align="center">
-  <img src="docs/images/orbit_j2_raan.png" width="49%" alt="RAAN drift under J2">
-  <img src="docs/images/attitude_rw_error.png" width="49%" alt="Attitude error for three gain sets">
+  <img src="docs/images/hero.png" alt="basilisk-mcp: talk to Basilisk from Claude" width="100%">
 </p>
 
-> basilisk-mcp is a community project. It is not affiliated with or endorsed by the
-> Autonomous Vehicle Systems (AVS) Lab at the University of Colorado Boulder, which
-> develops Basilisk.
+<h1 align="center">basilisk-mcp</h1>
+
+<p align="center">
+  <b>Talk to <a href="https://github.com/AVSLab/basilisk">Basilisk</a>.</b> Plan orbits and tune spacecraft attitude control
+  in plain language, with real Basilisk simulations and 3-D playback in Vizard.
+</p>
+
+<p align="center">
+  <a href="https://github.com/recepsuluker/basilisk-mcp/actions/workflows/ci.yml"><img src="https://github.com/recepsuluker/basilisk-mcp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-ISC-blue.svg" alt="License: ISC"></a>
+  <img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue" alt="Python 3.11–3.13">
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey" alt="Windows, macOS, Linux">
+  <img src="https://img.shields.io/badge/MCP-server-5598e7" alt="MCP server">
+</p>
 
 ---
 
-## Highlights
+**basilisk-mcp** connects [Claude](https://claude.ai) (or any
+[Model Context Protocol](https://modelcontextprotocol.io) client) to **Basilisk**, the
+open-source astrodynamics framework from the University of Colorado Boulder. You
+describe a spacecraft problem; Claude builds the simulation, runs it with real
+Basilisk on your computer, analyzes the results, draws the plots and opens the run
+in 3-D.
 
-* **Faithful to Basilisk.** Templates reproduce the official
-  `scenarioBasicOrbit.py` and `scenarioAttitudeFeedbackRW.py` examples, and the
-  test suite checks the recorded data against the unmodified examples.
-* **Safe by construction.** No tool executes code. Simulations are assembled from a
-  whitelisted catalog of Basilisk modules with type-, unit- and range-checked
-  parameters and typed message connections. See [SECURITY.md](SECURITY.md).
-* **Reproducible.** Every run is a generated, human-readable Basilisk script, stored
-  next to its results. `export_script` returns it, and *what runs is what you export*.
-* **Isolated.** Each run executes in a separate, resource-limited worker process
-  (`python -I`, minimal environment, timeouts, memory/CPU/file limits).
-* **Context-friendly results.** Physics analyses (orbit elements and J2 secular
-  rates, settling time, actuator usage), down-sampled queries, run comparisons, PNG
-  plots and CSV export, instead of megabytes of raw data.
-* **3-D visualization in one click.** Any run can also record a
-  [Vizard](https://avslab.github.io/basilisk/Vizard/Vizard.html) file; `open_in_vizard`,
-  `basilisk-mcp vizard` or a desktop shortcut opens it. See [docs/vizard.md](docs/vizard.md).
-* **One-click scenarios.** `basilisk-mcp run attitude_feedback_rw` runs a template (or a session
-  you built with Claude), prints a summary and opens Vizard; put it behind a desktop shortcut. See
-  [docs/one-click.md](docs/one-click.md).
-* **Self-correcting errors.** Every error says what was wrong and what a valid call
-  looks like, so Claude can fix its own mistakes.
+> *"Run the Basilisk reaction-wheel example, tune the gains so it settles faster, and show it in 3-D."*
 
-## How it works
+Claude answers with numbers you can check (settling time 418 s → 376 s, final error
+0.138° → 0.002°), an explanation (the wheels saturate at 0.2 N·m), a comparison
+plot, Vizard open on your screen, and, if you ask, the exact Python script it ran.
 
+## What you can ask
+
+| Ask Claude… | You get |
+|---|---|
+| *"Propagate a 700 km sun-synchronous orbit for three days with and without J2."* | orbit elements, RAAN drift vs. the analytic J2 rate, plots |
+| *"Run the reaction-wheel attitude example and tune it to settle under 6 minutes, wheels below 4000 rpm."* | gain sweep, settling times, wheel usage, comparison plot |
+| *"Build a 300 kg spacecraft in a 550 km orbit, nadir pointing with three HR12 wheels, starting from a tumble."* | a new scenario from scratch, validated before it runs |
+| *"Show it in Vizard."* | the run opens in Basilisk's 3-D visualizer |
+| *"Give me the script for that run."* | a standalone Basilisk Python script that reproduces it exactly |
+
+<p align="center">
+  <img src="docs/images/j2_orbit_planes.png" width="48%" alt="J2 turns the orbit plane over ten days">
+  <img src="docs/images/attitude_gains.png" width="48%" alt="Attitude error for three controller gain sets">
+</p>
+<p align="center"><sub>Both images come from runs made through basilisk-mcp. Left: J2 turns the orbit plane by
+−6.29°/day (analytic −6.27°/day). Right: three controller tunings of Basilisk's reaction-wheel example.</sub></p>
+
+## Get started in 5 minutes
+
+You need **Python 3.11+**, **Git** and the **[Claude desktop app](https://claude.ai/download)**.
+Basilisk itself is installed automatically from PyPI (`bsk`); nothing has to be compiled.
+
+**1. Install**
+
+<details open>
+<summary><b>Windows (PowerShell)</b></summary>
+
+```powershell
+winget install Python.Python.3.12     # skip if you already have Python 3.11+
+winget install Git.Git                # skip if you already have Git; then reopen PowerShell
+cd $HOME
+git clone https://github.com/recepsuluker/basilisk-mcp.git
+cd basilisk-mcp
+py -3.12 -m venv .venv
+.venv\Scripts\python -m pip install -e ".[basilisk]"
+.venv\Scripts\basilisk-mcp doctor
 ```
-┌──────────────────────┐  MCP (stdio or local HTTP)  ┌──────────────────────────────┐
-│ Claude Desktop /     │ ◄─────────────────────────► │ basilisk-mcp                 │
-│ Claude Code / any    │                             │  validate spec               │
-│ MCP client           │                             │  generate Basilisk script    │
-└──────────────────────┘                             │  analyze / plot / compare    │
-                                                     └──────────────┬───────────────┘
-                                                                    │ isolated worker
-                                                                    ▼
-                                                     ┌──────────────────────────────┐
-                                                     │ python -I scenario.py        │
-                                                     │ import Basilisk → results    │
-                                                     └──────────────────────────────┘
-```
+</details>
 
-A **session** is a declarative spec: modules, parameters, message connections and
-recorders. Tools edit the spec; `run_simulation` validates it, generates a standalone
-Basilisk script, runs it in a worker and loads the results. The full design is in
-[PLAN.md](PLAN.md), and a step-by-step explanation of how an MCP server is built is in
-[docs/how-mcp-works.md](docs/how-mcp-works.md).
-
-## Quick start
+<details>
+<summary><b>macOS / Linux</b></summary>
 
 ```bash
 git clone https://github.com/recepsuluker/basilisk-mcp.git
 cd basilisk-mcp
-python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
-pip install -e ".[basilisk]"                          # basilisk-mcp + Basilisk (bsk)
-basilisk-mcp doctor                                   # checks Basilisk and runs a smoke simulation
+python3 -m venv .venv
+.venv/bin/python -m pip install -e ".[basilisk]"
+.venv/bin/basilisk-mcp doctor
+```
+</details>
+
+`doctor` checks that Basilisk imports and runs a short orbit simulation. Every line
+should say `[ok]`.
+
+**2. Connect it to Claude**
+
+```powershell
+.venv\Scripts\basilisk-mcp install-claude --vizard-auto-open     # macOS/Linux: .venv/bin/basilisk-mcp …
 ```
 
-### Connect to Claude Desktop
+This adds the server to Claude Desktop's configuration, keeps your other servers and
+settings, and saves a backup. Then **quit Claude completely** (tray or menu-bar icon
+→ *Quit*) and start it again.
 
-Settings → Developer → Edit Config, then add (use the absolute path from
-`which basilisk-mcp`) and restart Claude Desktop:
+**3. (Optional) Install Vizard for 3-D**
 
-```json
-{
-  "mcpServers": {
-    "basilisk": {
-      "command": "/absolute/path/to/basilisk-mcp/.venv/bin/basilisk-mcp",
-      "args": ["serve"]
-    }
-  }
-}
-```
+Download [Vizard](https://avslab.github.io/basilisk/Vizard/VizardDownload.html) for your
+platform and unzip it into your home folder as `Vizard`. Check with
+`basilisk-mcp vizard --find`.
 
-### Connect to Claude Code
+**4. Ask**
 
-```bash
-claude mcp add --scope user basilisk -- /absolute/path/to/basilisk-mcp/.venv/bin/basilisk-mcp serve
-claude mcp list
-```
+Open a new chat in Claude and try: *"List the Basilisk templates you can run."* You
+should see Claude call tools such as `list_templates` and `create_session`.
 
-`basilisk-mcp print-config claude-desktop` / `claude-code` prints these snippets with
-your paths filled in. Windows paths, team sharing with `.mcp.json`, the local HTTP
-transport with bearer tokens, and troubleshooting are covered in
+Prefer Claude Code, a config file, or the HTTP transport? See
 [docs/connecting-claude.md](docs/connecting-claude.md).
 
-### Try it
+## One-click scenarios
 
-* *"List the Basilisk templates you can run."*
-* *"Compare a 700 km sun-synchronous orbit with and without J2 over three days."*
-* *"Build a nadir-pointing 300 kg spacecraft with three HR12 wheels from scratch and
-  tell me how long it takes to settle."*
-* *"Run the reaction-wheel example with Vizard and open it in 3-D."*
-
-More in [examples/prompts.md](examples/prompts.md).
-
-## Example results
-
-Produced by [`examples/demo_client.py`](examples/demo_client.py), which drives the
-server over stdio using only MCP tool calls, the way Claude does. Full write-up:
-[examples/RESULTS.md](examples/RESULTS.md).
-
-**Orbit propagation, point mass vs. J2.** 700 km, 98.19° sun-synchronous orbit, three days:
-
-| | Point mass | J2 | J2 analytic |
-|---|---|---|---|
-| RAAN rate [deg/day] | 0.00000 | 0.99023 | 0.99102 |
-| Relative energy drift | −1.0 × 10⁻⁹ | | |
-
-**Attitude control with reaction wheels.** Basilisk's `scenarioAttitudeFeedbackRW`,
-then two retuned controllers:
-
-| Gains | Settling time to 1° [s] | Final error [deg] | Peak wheel speed [rpm] |
-|---|---|---|---|
-| K = 3.5, P = 30 (Basilisk example) | 418 | 0.138 | 2917 |
-| K = 7, P = 40 | 386 | 0.025 | 3593 |
-| K = 12, P = 60 | 376 | 0.002 | 3778 |
-
-<p align="center">
-  <img src="docs/images/nadir_pointing.png" width="70%" alt="Nadir pointing from a tumble">
-</p>
-
-## Tools
-
-| Group | Tools |
-|---|---|
-| Discovery | `server_info`, `list_module_types`, `describe_module_type`, `list_templates` |
-| Sessions | `create_session`, `list_sessions`, `get_session`, `close_session` |
-| Editing | `add_module`, `set_params`, `remove_module`, `connect`, `disconnect`, `add_recorder`, `remove_recorder`, `set_simulation` |
-| Checking | `validate_session`, `export_script` |
-| Running | `run_simulation` (optionally with `vizard=true`), `list_runs`, `get_run`, `open_in_vizard` |
-| Results | `query_results`, `analyze_run`, `plot_results`, `compare_runs`, `export_results` |
-
-Prompts: `orbit_study`, `attitude_control_study`. Resources: `basilisk://modules`,
-`basilisk://sessions/{session}/spec`. Full reference: [docs/tools.md](docs/tools.md).
-
-## Module catalog
-
-| Type | Basilisk | Purpose |
-|---|---|---|
-| `spacecraft` | `spacecraft.Spacecraft` | rigid hub, initial orbit (elements or r/v) and attitude |
-| `gravity` | `simIncludeGravBody` | Earth, Moon, Mars, Sun, Venus, Jupiter; J2 for Earth and Mars |
-| `ext_force_torque` | `extForceTorque` | constant or commanded body torque/force |
-| `simple_nav` | `simpleNav` | ideal attitude and translational navigation |
-| `reaction_wheels` | `reactionWheelStateEffector` + `simIncludeRW` | Honeywell HR12/HR14/HR16 clusters |
-| `inertial3d` | `inertial3D` | inertial pointing |
-| `hill_point` | `hillPoint` | nadir (Hill frame) pointing |
-| `att_tracking_error` | `attTrackingError` | attitude guidance error |
-| `mrp_feedback` | `mrpFeedback` | MRP PD/PID attitude control |
-| `rw_motor_torque` | `rwMotorTorque` | body torque → wheel motor torques |
-
-Templates: `basic_orbit`, `attitude_feedback_torque`, `attitude_feedback_rw`,
-`nadir_pointing_rw`. Every parameter, unit and port is listed in
-[docs/modules.md](docs/modules.md).
-
-## Validation
+Run a scenario and open it in Vizard without opening a chat:
 
 ```bash
-pip install -e ".[dev]"
-pytest
+basilisk-mcp run attitude_feedback_rw            # Basilisk's reaction-wheel example
+basilisk-mcp run basic_orbit --duration 86400    # one day of orbit propagation
+basilisk-mcp run s1a2b3c4d                       # a scenario you built with Claude
 ```
 
-The suite (99 tests) covers:
+```
+Run r001 completed in 2.3 s (Basilisk 2.12.2)
+  attitude error  82.06 deg -> 0.1378 deg (below 1 deg after 418 s)
+  wheels          peak speed 2917 rpm
+Opened Vizard: ...\runs\r001\vizard.bin
+```
 
-* **Physics.** Reproduction of the official `scenarioAttitudeFeedbackRW.py` (attitude
-  error, wheel speeds, motor torques) and `scenarioBasicOrbit.py` (position and
-  velocity); point-mass conservation of orbit elements and energy; J2 RAAN drift
-  within 2 % of the analytic rate; integrator accuracy ordering; nadir-pointing
-  convergence. Reference data comes from the unmodified examples via
-  [`tools/generate_reference.py`](tools/generate_reference.py).
-* **Security.** Code injection through names and parameters, path traversal, tampered
-  session files, worker isolation (environment, `PYTHONPATH`, planted modules),
-  timeouts killing process groups, memory limits, HTTP loopback/token enforcement.
-* **Validation and MCP flow.** Every parameter kind, port typing, whole-session
-  checks, structured errors, and full tool workflows through an MCP client.
+Put these behind desktop shortcuts and each scenario is a double-click:
+[docs/one-click.md](docs/one-click.md).
 
-## Configuration
+## What's inside
 
-Optional TOML file (`basilisk-mcp init-config`), `BASILISK_MCP_*` environment
-variables, or CLI flags. Key settings: `data_dir`, `python` (a separate interpreter
-with Basilisk), `run_timeout_s`, `max_concurrent_runs`, `max_steps`,
-`memory_limit_mb`, `vizard_path`, `vizard_auto_open`. See
-[docs/configuration.md](docs/configuration.md).
+| | |
+|---|---|
+| **27 MCP tools** | create and edit scenarios, run, analyze (orbit, attitude, actuators), query, plot, compare, export CSV, export script, open in Vizard |
+| **Basilisk modules** | spacecraft hub · gravity (Earth, Moon, Mars, Sun, Venus, Jupiter; J2 for Earth and Mars) · reaction wheels (Honeywell HR12/14/16) · external torque · navigation · inertial and nadir pointing · tracking error · MRP feedback control · wheel torque mapping |
+| **Templates** | `basic_orbit`, `attitude_feedback_torque`, `attitude_feedback_rw` (mirroring the official Basilisk examples) and `nadir_pointing_rw` |
+| **Results** | settling time, final error, wheel speed vs. limit, orbit elements, J2 secular rates, energy drift, plots, CSV |
+| **3-D** | any run can record a Vizard file and open it with one call, command or click |
+
+Full references: [tools](docs/tools.md) · [modules and parameters](docs/modules.md) ·
+[Vizard](docs/vizard.md) · [configuration](docs/configuration.md).
+
+## Why you can trust the numbers
+
+* **It is real Basilisk.** Each run is a generated, standalone Basilisk script executed
+  by Basilisk itself. Ask for it with *"export the script"* and rerun it without the
+  server.
+* **Checked against the official examples.** Tests reproduce
+  `scenarioAttitudeFeedbackRW.py` (attitude error, wheel speeds, motor torques) and
+  `scenarioBasicOrbit.py` (position and velocity) from the unmodified Basilisk
+  examples, check J2 drift against analytic theory, and verify integrator accuracy.
+  More than 100 tests run on Windows, macOS and Linux.
+* **Safe by design.** Claude can only assemble catalogued Basilisk modules with
+  validated, unit-explicit parameters. No tool runs arbitrary code or touches files
+  outside the server's data folder, and every run is an isolated, time- and
+  memory-limited process. See [SECURITY.md](SECURITY.md).
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| Claude doesn't use the basilisk tools | Run `basilisk-mcp install-claude` again, then quit Claude from the tray/menu-bar icon and restart it. Older chats may not see new tools: open a new chat. |
+| No *Developer* section in Claude's settings | Not needed: `install-claude` edits the configuration file for you. |
+| `doctor` says Basilisk can't be imported | Install it in the same environment: `pip install bsk`. |
+| Vizard doesn't open | `basilisk-mcp vizard --find`; unzip Vizard to your home folder as `Vizard`, or set `vizard_path` ([docs/vizard.md](docs/vizard.md)). |
+
+More in [docs/connecting-claude.md](docs/connecting-claude.md#8-troubleshooting).
+
+## For developers
+
+* How the server is designed and how to build an MCP server like it:
+  [docs/how-mcp-works.md](docs/how-mcp-works.md) and [PLAN.md](PLAN.md)
+* Contributing, adding Basilisk modules, regenerating reference data:
+  [CONTRIBUTING.md](CONTRIBUTING.md)
+* Example results and the script that produces them: [examples/](examples/)
+
+```bash
+pip install -e ".[dev]" && pytest
+```
 
 ## Roadmap
 
-Atmospheric drag, SPICE ephemerides and third-body gravity, thrusters and maneuvers,
-sensor noise models, Monte Carlo studies, live Vizard streaming, formation flying. See
-[PLAN.md §10](PLAN.md#10-roadmap-after-v01). Contributions are welcome: see
-[CONTRIBUTING.md](CONTRIBUTING.md).
+Atmospheric drag and orbit lifetime · thrusters and maneuvers (Δv, Hohmann) · SPICE
+ephemerides and third-body gravity · sensor noise models · eclipses and power ·
+ground-station access · Monte Carlo studies · live Vizard streaming. Ideas and pull
+requests are welcome.
 
 ## Acknowledgements
 
 [Basilisk](https://avslab.github.io/basilisk/) is developed by the Autonomous Vehicle
 Systems (AVS) Lab at the University of Colorado Boulder together with the Laboratory
 for Atmospheric and Space Physics (LASP), and is released under the ISC license. If you
-publish results obtained with Basilisk, please cite it as its documentation describes. The design of this server was informed by
-[GMAT-mcp](https://github.com/dcajacob/GMAT-mcp).
+publish results obtained with Basilisk, please cite it as its documentation describes.
+The design of this server was informed by [GMAT-mcp](https://github.com/dcajacob/GMAT-mcp).
+
+basilisk-mcp is a community project and is not affiliated with or endorsed by the AVS
+Lab, LASP or Anthropic.
 
 ## License
 
-[ISC](LICENSE), matching Basilisk.
+[ISC](LICENSE), the same license as Basilisk.

@@ -67,6 +67,21 @@ print ready-to-paste configuration with these absolute paths filled in.
 
 ## 3. Claude Desktop
 
+**Easiest:** let the server add itself to Claude Desktop's configuration. It keeps your
+other servers and settings and writes a backup (`claude_desktop_config.json.bak`):
+
+```bash
+basilisk-mcp install-claude                     # add --vizard-auto-open to open Vizard after Vizard runs
+basilisk-mcp install-claude --dry-run           # only show what would be written
+```
+
+Then quit Claude Desktop completely (tray or menu-bar icon → *Quit*) and start it again.
+Recent Claude Desktop versions may not show a *Developer* section in Settings; the
+command does not need it.
+
+**By hand:**
+
+
 1. Open Claude Desktop → **Settings → Developer → Edit Config**. This opens
    `claude_desktop_config.json`:
    * macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`

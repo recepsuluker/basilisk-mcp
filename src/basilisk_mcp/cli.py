@@ -255,6 +255,78 @@ def cmd_vizard(args) -> int:
     return 0
 
 
+def claude_config_candidates() -> list[Path]:
+    """Where Claude Desktop keeps claude_desktop_config.json on each platform."""
+    home = Path.home()
+    if sys.platform == "win32":
+        appdata = Path(os.environ.get("APPDATA", home / "AppData" / "Roaming"))
+        local = Path(os.environ.get("LOCALAPPDATA", home / "AppData" / "Local"))
+        found = [appdata / "Claude" / "claude_desktop_config.json"]
+        found += sorted(local.glob("Packages/*Claude*/LocalCache/Roaming/Claude/claude_desktop_config.json"))
+        return found
+    if sys.platform == "darwin":
+        return [home / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"]
+    return [home / ".config" / "Claude" / "claude_desktop_config.json"]
+
+
+def server_executable() -> str:
+    exe = shutil.which("basilisk-mcp")
+    if exe:
+        return str(Path(exe).resolve())
+    scripts = Path(sys.executable).parent
+    for name in ("basilisk-mcp.exe", "basilisk-mcp"):
+        if (scripts / name).exists():
+            return str(scripts / name)
+    return str(Path(sys.argv[0]).resolve())
+
+
+def cmd_install_claude(args) -> int:
+    """Add (or update) the basilisk server in Claude Desktop's configuration, keeping everything else."""
+    if args.config_file:
+        path = Path(args.config_file).expanduser()
+    else:
+        existing = [p for p in claude_config_candidates() if p.is_file()]
+        path = existing[0] if existing else claude_config_candidates()[0]
+    data = {}
+    if path.is_file():
+        text = path.read_text(encoding="utf-8-sig").strip()
+        if text:
+            try:
+                data = json.loads(text)
+            except json.JSONDecodeError as exc:
+                print(f"{path} is not valid JSON ({exc}); fix or remove it first.", file=sys.stderr)
+                return 1
+    if not isinstance(data, dict):
+        print(f"{path} does not contain a JSON object.", file=sys.stderr)
+        return 1
+    serve_args = ["serve"]
+    if args.config:
+        serve_args = ["--config", str(Path(args.config).expanduser().resolve()), "serve"]
+    entry: dict = {"command": server_executable(), "args": serve_args}
+    if args.vizard_auto_open:
+        entry["env"] = {"BASILISK_MCP_VIZARD_AUTO_OPEN": "true"}
+    servers = data.setdefault("mcpServers", {})
+    if not isinstance(servers, dict):
+        print(f"'mcpServers' in {path} is not an object.", file=sys.stderr)
+        return 1
+    action = "Updated" if "basilisk" in servers else "Added"
+    servers["basilisk"] = entry
+    if args.dry_run:
+        print(json.dumps({"mcpServers": {"basilisk": entry}}, indent=2))
+        print(f"(dry run: {path} not changed)")
+        return 0
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.is_file():
+        shutil.copy2(path, path.with_name(path.name + ".bak"))
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")  # UTF-8 without BOM
+    others = sorted(k for k in servers if k != "basilisk")
+    print(f"{action} the 'basilisk' server in {path}")
+    if others:
+        print(f"Kept your other servers: {', '.join(others)}")
+    print("Now quit Claude Desktop completely (tray/menu-bar icon -> Quit) and start it again.")
+    return 0
+
+
 def cmd_init_config(args) -> int:
     path = Path(args.path).expanduser()
     if path.exists() and not args.force:
@@ -318,6 +390,12 @@ def build_parser() -> argparse.ArgumentParser:
     viz.add_argument("--run", help="run id within --session (default: its latest Vizard run)")
     viz.add_argument("--find", action="store_true", help="only print where Vizard was found")
     viz.set_defaults(func=cmd_vizard)
+
+    inst = sub.add_parser("install-claude", help="add this server to Claude Desktop's configuration")
+    inst.add_argument("--vizard-auto-open", action="store_true", help="open Vizard automatically after Vizard runs")
+    inst.add_argument("--config-file", help="path to claude_desktop_config.json (default: auto-detect)")
+    inst.add_argument("--dry-run", action="store_true", help="print the entry without writing")
+    inst.set_defaults(func=cmd_install_claude)
 
     token = sub.add_parser("token", help="print a random bearer token for the HTTP transport")
     token.set_defaults(func=cmd_token)
